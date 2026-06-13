@@ -1,0 +1,61 @@
+Login
+---------
+Form with 2 fields Username / email and password
+Possibility to Register
+
+If user enter correct username and password navigate to HOME
+If user want to register navigate to REGISTER
+
+REGISTER
+---------------
+Is a stepper with 2 steps
+Step 1. Text with question
+- Quieres crear un equipo o participar en el ?
+- - Si usuario quiere participar navegar a : EQUIPO_ADD
+- - Si usuario quiere crear el equipo, navegar a : EQUIPO_CREATION
+
+EQUIPO_ADD
+-------
+View with text: Introduce el codigo del equipo, un form input and boton enviar
+After click on enviar, mesasge : We sent the request to the capitan of the team, then navigate to HOME
+
+EQUIPO_CREATION
+--------
+Text: Que tipo de equipo quieres formar ?
+- Combobox con distintos tipos de equipos (futbol5, futbol7, futbol11)
+- Despues de la seleccion navegar a TEAM_CONFIGURATION
+
+HOME
+--------
+List of the teams the user is owner or participate
+Display Logo and under the logo the name of the team. If user is owner, display a small icon before the name
+Teams are sorted alphabetically. 
+Teams can be selected as favorite, and then sorted with favorite teams top of the list
+
+If user touch the icon to the team navigate to TEAM_DETAIL
+
+Have an icon in the top to navigate to SETTINGS
+
+TEAM_DETAIL
+----------------
+Display team configuration only with the main players
+Button in the top that say: Start match. If user click, navigate to START_MATCH
+
+TEAM_CONFIGURATION
+----------------
+Same as team detail but with edit configuration
+
+
+START_MATCH
+-------
+Display only titulars, in the left part, possibility to drag and drop players. Here user introduce also statistics about the
+live match.
+Think to have a websocket to update the score from the match in case there is an other team from the app playing vs
+
+
+SETTINGS
+-------
+Posibility to change username in case noone has
+Select type of abo
+Button about us (to display developer information)
+Button Feedback, to report errors and good feedback

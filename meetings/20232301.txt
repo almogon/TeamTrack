@@ -1,0 +1,37 @@
+TODO
+- Alvaro: Base de datos en AWS de tipo MySQL
+-- create tables
+-- review sequences
+-- review FK
+- Alan: Expo con navegacion de login, register, pantalla home
+
+CRUD:
+- User
+- Player
+- Team  (delete only if u are owner) and only logical delete, not fisicaly 
+- CRU: Game
+- CRU: Lineup (opcion de reset)
+- Create, Read: event
+
+
+Version 0
+- Base de datos
+- Front con expo, con login, register, pantalla home (sin css, solo navegacion y logica)
+- crear usuario
+- editar usuario
+- crear equipo (nombre y logo)
+- editar equipo (nombre y logo)
+- editar info personal
+- Restriccion de solo 2 equipo y participar en 2 equipo -- PARA TODOS
+
+Version 1
+- Alineacion
+-- editar, crear, cambios en los sistemas (4-4-2 a 4-3-3 ...)
+
+Version 2
+- Abos
+
+Version 3
+- invitar gente (via email con un link, o solo copy link)
+- join team usando codigo del equipo
+- fetch del usuario que se registra nuevo con jugadores ya existentes en la alineacion

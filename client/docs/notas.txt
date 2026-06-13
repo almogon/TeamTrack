@@ -1,0 +1,25 @@
+Aun que haya una base de datos relacional, guardar en una NoSQL la info basica de cada usuario
+key: userBasicInfo
+value: {username}
+info: {
+  teams: [{
+    logo: "",
+    name: "",
+    isOwner: true,
+    isFavourite: false
+  }, ....],
+  username: alvaro,
+  photoURL: erewrwerwerwerwerewr,
+  abo: {}
+}
+
+De manera que al hacer login, acceder a esta info sea inmediata. En la BD relacional tendremos la info general del equipo,
+como el nombre, si es owner y la relacion con el usuario mediante IDs, pero en la no relacional dejamos las cosas editables
+como el isFavourite o el logo. De manera que siempre que se cambien esas cosas, se cambian solo en la no relacional.
+------------------
+
+Despues de cada año, guardar las estadisticas de cada equipo en algun sitio en el cloud royo S3 o algo asi,
+para dejar hueco a las nuevas estadisitcas. Royo un reseteo, pero que a la vez pueda ser accesible.
+
+------------------
+

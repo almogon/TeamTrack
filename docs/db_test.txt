@@ -1,0 +1,40 @@
+users
+alvaro - 1 (1, alvarito team 1)(3, morales, team 5)
+alan - 2 (1, alan team 1)(3, alang, team 5)
+ani - 4 (3, ani, team 5)
+al1 - 5 (1, alan team 1)
+al2 - 6 (1, alan team 1)
+al3 - 7 (1, alan team 1)
+al4 - 8 (1, alan team 1)
+al5 - 9 (1, alan team 1) (3, alang, team 5 manager)
+al6 - 10 (3, alang, team 5)
+
+INSERT INTO `teamtrack`.`user`
+(
+`username`,
+`email`,
+`password`)
+VALUES
+(
+'al6',
+'al6@test.com',
+'1234');
+--------------------
+teams
+1 taylor
+5 austria
+
+--------------------
+players
+1 / user 1 team 1
+3 / user 1 team 5
+4 / user 2 team 1
+6 / user 2 team 5
+7 / user 4 team 5
+8 / user 10 team 5
+9 / user 9 team 5 isManager
+10 / user 5 team 5 reserve
+11 / user 6 team 1
+12 / user 7 team 1
+13 / user 8 team 1
+14 / user 9 team 1

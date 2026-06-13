@@ -1,0 +1,8 @@
+Alvaro: 
+- Conectarse a la BD
+- Crear equipo demo API
+
+Alan:
+- Crear Home
+- Crear modal login/registry
+- Crear modal crear equipo

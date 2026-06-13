@@ -1,0 +1,261 @@
+openapi: 3.0.3
+info:
+  title: Swagger TeamTrack
+  description: |-
+    API Docu
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: teamtrack@gmail.com
+  version: 0.0.1
+servers:
+  - url: https://teamtrack/api/v1
+tags:
+  - name: team
+    description: Everything about teams
+  - name: user
+    description: Operations about user
+  - name: utils
+    description: Common functions to help the workflow of the app
+
+paths:
+  /login:
+    get:
+      tags:
+        - user
+      summary: Logs user into the system
+      description: ''
+      operationId: loginUser
+      parameters:
+        - name: username
+          in: query
+          description: The user name for login
+          required: false
+          schema:
+            type: string
+        - name: password
+          in: query
+          description: The password for login in clear text
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          headers:
+            X-Expires-After:
+              description: date in UTC when token expires
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Invalid username/password supplied
+  /logout:
+    get:
+      tags:
+        - user
+      summary: Logs out current logged in user session
+      description: ''
+      operationId: logoutUser
+      parameters: []
+      responses:
+        default:
+          description: successful operation
+  /register:
+    post:
+      tags:
+        - user
+      summary: Register a user
+      requestBody:
+        description: Update an existent pet in the store
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUser'
+          
+      responses:
+        default:
+          description: success
+  /availability:
+    get:
+      tags:
+        - utils
+      parameters:
+        - name: property
+          required: true
+          description: Property to check availability (username, team name, player dorsal in the team...)
+          in: query
+          schema:
+            type: string
+        - name: value
+          required: true
+          description: The value of the property to check
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '500':
+          description: Server error
+  
+  /teams:
+    get:
+      tags:
+        - team
+      summary: Get all teams for the user
+      description: ''
+      operationId: getTeams
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamListHome'          
+        '400':
+          description: Invalid username supplied
+          
+  /team:
+    post:
+      tags:
+        - team
+      summary: create a new team
+      requestBody:
+        description: Update an existent pet in the store
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTeam'
+      responses:
+        default: 
+          description: success
+
+  /team/{teamId}:
+    get:
+      tags:
+        - team
+      summary: Get detail of the team
+      parameters:
+        - name: teamId
+          in: path
+          description: ID of the team
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDetail'  
+    put:
+      tags:
+        - team
+      summary: Update team
+      description: This can only be done by the logged in user.
+      operationId: updateUser
+      parameters:
+        - name: teamId
+          in: path
+          description: The name that needs to be updated
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Update an existent team 
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTeam'
+      responses:
+        default:
+          description: successful operation
+    delete:
+      tags:
+        - team
+      summary: Delete team
+      description: This can only be done by the logged in user.
+      operationId: deleteTeam
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Invalid team supplied
+        '404':
+          description: Team not found
+  
+  /team/join:
+    post:
+      tags:
+        - team
+      summary: request join a team
+      requestBody:
+        description:  Code to join a team
+        content:
+          application/json:
+            schema:
+              type: string
+      responses:
+        default:
+          description: success
+
+components:
+  schemas:
+    TeamListHome:
+      type: array
+      items:
+        type: object
+        properties:
+          name: 
+            type: string
+          id: 
+            type: string
+          logo: 
+            type: string
+          isOwner:
+            type: boolean
+          isFavourite:
+            type: boolean
+    TeamDetail:
+      type: object
+      properties:
+        id:
+          type: string
+    UpdateTeam:
+      type: object
+      properties:
+        id:
+          type: string
+    CreateUser:
+      type: object
+      properties:
+        email:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+    CreateTeam:
+      type: object
+      properties:
+        teamCategory:
+          type: number
+          description: Id of the team category (futbol5, futbol7, futbol11)
+        name:
+          type: string
+        logo:
+          type: string
