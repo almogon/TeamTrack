@@ -46,6 +46,7 @@ flutter_export_environment.sh
 .env
 *.env
 .env.local
+config.json
 
 # Symbolication related
 app.*.symbols
