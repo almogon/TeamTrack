@@ -78,7 +78,7 @@ class _TeamList extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: teams.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) => _TeamCard(team: teams[index]),
     );
   }
@@ -92,6 +92,11 @@ class _TeamCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final subtitle = [
+      team.sportFormatLabel,
+      if (team.season != null) 'Season ${team.season}',
+    ].join(' · ');
+
     return Card(
       child: ListTile(
         leading: CircleAvatar(
@@ -105,7 +110,7 @@ class _TeamCard extends StatelessWidget {
           ),
         ),
         title: Text(team.name),
-        subtitle: team.season != null ? Text('Season ${team.season}') : null,
+        subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.push('/teams/${team.id}'),
       ),

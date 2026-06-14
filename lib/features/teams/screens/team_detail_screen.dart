@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/player.dart';
 import '../providers/team_provider.dart';
@@ -22,10 +23,33 @@ class TeamDetailScreen extends ConsumerWidget {
         body: Center(child: Text('Error: $err')),
       ),
       data: (detail) => Scaffold(
-        appBar: AppBar(title: Text(detail.team.name)),
+        appBar: AppBar(
+          title: Text(detail.team.name),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(28),
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  detail.team.sportFormatLabel,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () =>
+              context.push('/teams/$teamId/players/new'),
+          icon: const Icon(Icons.person_add_outlined),
+          label: const Text('Add player'),
+        ),
         body: detail.players.isEmpty
             ? const _EmptyRoster()
-            : _PlayerList(players: detail.players),
+            : _PlayerList(players: detail.players, teamId: teamId),
       ),
     );
   }
@@ -49,7 +73,7 @@ class _EmptyRoster extends StatelessWidget {
           Text('No players yet',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          const Text('Add players to build your roster'),
+          const Text('Tap "Add player" to build your roster'),
         ],
       ),
     );
@@ -57,16 +81,17 @@ class _EmptyRoster extends StatelessWidget {
 }
 
 class _PlayerList extends StatelessWidget {
-  const _PlayerList({required this.players});
+  const _PlayerList({required this.players, required this.teamId});
 
   final List<Player> players;
+  final String teamId;
 
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.only(bottom: 96, top: 8),
       itemCount: players.length,
-      separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+      separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
       itemBuilder: (context, index) {
         final player = players[index];
         return ListTile(
@@ -83,8 +108,23 @@ class _PlayerList extends StatelessWidget {
             ),
           ),
           title: Text(player.name),
-          subtitle:
-              player.position != null ? Text(player.position!) : null,
+          subtitle: Row(
+            children: [
+              if (player.alias != null && player.alias!.isNotEmpty)
+                Text('"${player.alias}"  '),
+              if (player.position != null)
+                Text(
+                  player.position!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () =>
+              context.push('/teams/$teamId/players/${player.id}'),
         );
       },
     );

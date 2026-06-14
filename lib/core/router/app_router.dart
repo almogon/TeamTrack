@@ -6,7 +6,10 @@ import '../../features/auth/notifiers/auth_notifier.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/players/screens/add_player_screen.dart';
+import '../../features/players/screens/player_detail_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/teams/models/player.dart';
 import '../../features/teams/screens/create_team_screen.dart';
 import '../../features/teams/screens/team_detail_screen.dart';
 
@@ -24,16 +27,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
-      GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-      GoRoute(path: '/teams/new', builder: (_, __) => const CreateTeamScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+      GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+      GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+      GoRoute(path: '/teams/new', builder: (_, _) => const CreateTeamScreen()),
       GoRoute(
-        path: '/teams/:id',
+        path: '/teams/:teamId',
         builder: (_, state) =>
-            TeamDetailScreen(teamId: state.pathParameters['id']!),
+            TeamDetailScreen(teamId: state.pathParameters['teamId']!),
       ),
-      GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+      GoRoute(
+        path: '/teams/:teamId/players/new',
+        builder: (_, state) =>
+            AddPlayerScreen(teamId: state.pathParameters['teamId']!),
+      ),
+      GoRoute(
+        path: '/teams/:teamId/players/:playerId',
+        builder: (_, state) => PlayerDetailScreen(
+          teamId: state.pathParameters['teamId']!,
+          playerId: state.pathParameters['playerId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/teams/:teamId/players/:playerId/edit',
+        builder: (_, state) => AddPlayerScreen(
+          teamId: state.pathParameters['teamId']!,
+          player: state.extra as Player?,
+        ),
+      ),
     ],
   );
 });
