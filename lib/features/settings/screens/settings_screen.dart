@@ -1,22 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+import '../../auth/providers/profile_provider.dart';
+import '../../teams/providers/teams_provider.dart';
 
-  String get _username {
-    final meta = Supabase.instance.client.auth.currentUser?.userMetadata;
-    return meta?['username'] as String? ?? 'User';
-  }
+class SettingsScreen extends ConsumerWidget {
+  const SettingsScreen({super.key});
 
   Future<void> _signOut() async {
     await Supabase.instance.client.auth.signOut();
-    // AuthNotifier triggers router redirect to /login
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+    final teamsAsync = ref.watch(teamsProvider);
+
+    final username = profileAsync.value?.username ??
+        Supabase.instance.client.auth.currentUser?.userMetadata?['username']
+            as String? ??
+        'User';
+    final planLabel = profileAsync.value?.planLabel ?? 'Free';
+    final teamLimit = profileAsync.value?.teamLimit ?? 1;
+    final teamCount = teamsAsync.value?.length ?? 0;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
@@ -26,23 +35,44 @@ class SettingsScreen extends StatelessWidget {
             leading: CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               child: Text(
-                _username[0].toUpperCase(),
+                username[0].toUpperCase(),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            title: Text(_username),
-            subtitle: const Text('Free plan · 1 team'),
+            title: Text('@$username'),
+            subtitle: Text(
+              '$planLabel plan · $teamCount / $teamLimit team${teamLimit == 1 ? '' : 's'}',
+            ),
           ),
           const Divider(),
           _SectionLabel('Team'),
           ListTile(
             leading: const Icon(Icons.add_circle_outline),
             title: const Text('Create team'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/teams/new'),
+            trailing: teamCount >= teamLimit
+                ? Chip(
+                    label: Text('Limit reached'),
+                    backgroundColor:
+                        Theme.of(context).colorScheme.errorContainer,
+                    labelStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                      fontSize: 12,
+                    ),
+                    padding: EdgeInsets.zero,
+                  )
+                : const Icon(Icons.chevron_right),
+            onTap: teamCount >= teamLimit
+                ? () => ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Upgrade your plan to create more than $teamLimit team${teamLimit == 1 ? '' : 's'}.',
+                        ),
+                      ),
+                    )
+                : () => context.push('/teams/new'),
           ),
           const Divider(),
           _SectionLabel('Account'),

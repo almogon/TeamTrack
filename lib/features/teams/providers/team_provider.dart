@@ -13,7 +13,7 @@ final teamDetailProvider =
       .select('*, players(*)')
       .eq('id', teamId)
       .single();
-  final team = Team.fromJson(data as Map<String, dynamic>);
+  final team = Team.fromJson(data);
   final players = ((data['players'] as List<dynamic>?) ?? [])
       .map((p) => Player.fromJson(p as Map<String, dynamic>))
       .where((p) => p.active)

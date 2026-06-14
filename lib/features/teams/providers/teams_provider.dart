@@ -20,11 +20,23 @@ class TeamsNotifier extends AsyncNotifier<List<Team>> {
         .toList();
   }
 
-  Future<void> createTeam(String name) async {
+  Future<void> createTeam({
+    required String name,
+    required String sport,
+    required String format,
+    required int minPlayers,
+    required int maxPlayers,
+    String? season,
+  }) async {
     final user = Supabase.instance.client.auth.currentUser!;
     await Supabase.instance.client.from('teams').insert({
       'owner_id': user.id,
       'name': name.trim(),
+      'sport': sport,
+      'format': format,
+      'min_players': minPlayers,
+      'max_players': maxPlayers,
+      if (season != null && season.trim().isNotEmpty) 'season': season.trim(),
     });
     state = const AsyncLoading();
     state = await AsyncValue.guard(_fetch);

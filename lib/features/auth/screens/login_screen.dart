@@ -14,13 +14,13 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -29,8 +29,22 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
+      final identifier = _identifierController.text.trim();
+      final email = identifier.contains('@')
+          ? identifier
+          : await _resolveEmail(identifier);
+
+      if (email == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Username not found')),
+          );
+        }
+        return;
+      }
+
       await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
+        email: email,
         password: _passwordController.text,
       );
     } on AuthException catch (e) {
@@ -41,6 +55,12 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<String?> _resolveEmail(String username) async {
+    final result = await Supabase.instance.client
+        .rpc('get_email_by_username', params: {'p_username': username});
+    return result as String?;
   }
 
   @override
@@ -72,11 +92,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 40),
                   TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    controller: _identifierController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email or username',
+                    ),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
-                    validator: (v) => Validators.requiredText(v, label: 'Email'),
+                    autocorrect: false,
+                    validator: (v) =>
+                        Validators.requiredText(v, label: 'Email or username'),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(

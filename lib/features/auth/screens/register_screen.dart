@@ -31,12 +31,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
+      final username = _usernameController.text.trim();
+
+      final available = await Supabase.instance.client
+          .rpc('is_username_available', params: {'p_username': username});
+      if (available == false) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Username is already taken')),
+          );
+        }
+        return;
+      }
+
       await Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        data: {'username': _usernameController.text.trim()},
+        data: {'username': username},
       );
-      // AuthNotifier triggers router redirect to /home
+      // DB trigger (handle_new_user) creates the profiles row automatically.
+      // AuthNotifier triggers router redirect to /home.
     } on AuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -76,10 +90,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _usernameController,
-                    decoration: const InputDecoration(labelText: 'Username'),
+                    decoration: const InputDecoration(
+                      labelText: 'Username',
+                      helperText: 'Min. 3 characters, letters and numbers only',
+                    ),
                     textInputAction: TextInputAction.next,
-                    validator: (v) =>
-                        Validators.requiredText(v, label: 'Username'),
+                    autocorrect: false,
+                    validator: Validators.username,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
