@@ -45,6 +45,9 @@ flutter_export_environment.sh
 # Conversation memories
 memories/
 
+# Local agents
+agents/
+
 # Environment variables
 .env
 *.env
