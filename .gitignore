@@ -42,6 +42,9 @@ flutter_export_environment.sh
 # Claude Code local settings
 .claude/settings.local.json
 
+# Conversation memories
+memories/
+
 # Environment variables
 .env
 *.env

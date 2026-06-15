@@ -30,7 +30,6 @@ jobs:
       - name: Build web
         run: |
           flutter build web \
-            --web-renderer canvaskit \
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
             --release
