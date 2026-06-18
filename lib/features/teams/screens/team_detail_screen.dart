@@ -61,7 +61,7 @@ class TeamDetailScreen extends ConsumerWidget {
               final tab = DefaultTabController.of(ctx);
               return AnimatedBuilder(
                 animation: tab,
-                builder: (_, __) => tab.index == 0
+                builder: (_, _) => tab.index == 0
                     ? FloatingActionButton.extended(
                         onPressed: () =>
                             context.push('/teams/$teamId/players/new'),

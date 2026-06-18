@@ -43,7 +43,6 @@ class TeamsNotifier extends AsyncNotifier<List<Team>> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(_fetch);
   }
-}
 
   Future<void> _enforcePlanLimit() async {
     try {
@@ -51,7 +50,7 @@ class TeamsNotifier extends AsyncNotifier<List<Team>> {
         'enforce-plan-limit',
         body: {'resource': 'team'},
       );
-    } on FunctionsException catch (e) {
+    } on FunctionException catch (e) {
       if (e.status == 403) {
         final d = e.details;
         throw PlanLimitException(

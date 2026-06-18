@@ -203,23 +203,30 @@ class MatchSummaryScreen extends ConsumerWidget {
     switch (sport) {
       case 'basketball':
         final parts = <String>[];
-        if ((counts['point'] ?? 0) > 0)
+        if ((counts['point'] ?? 0) > 0) {
           parts.add('${counts['point']}pts');
-        if ((counts['rebound'] ?? 0) > 0)
+        }
+        if ((counts['rebound'] ?? 0) > 0) {
           parts.add('${counts['rebound']}reb');
-        if ((counts['assist'] ?? 0) > 0)
+        }
+        if ((counts['assist'] ?? 0) > 0) {
           parts.add('${counts['assist']}ast');
-        if ((counts['foul'] ?? 0) > 0)
+        }
+        if ((counts['foul'] ?? 0) > 0) {
           parts.add('${counts['foul']}f');
+        }
         return parts.isEmpty ? '—' : parts.join(' · ');
       case 'volleyball':
         final parts = <String>[];
-        if ((counts['serve'] ?? 0) > 0)
+        if ((counts['serve'] ?? 0) > 0) {
           parts.add('${counts['serve']}srv');
-        if ((counts['block'] ?? 0) > 0)
+        }
+        if ((counts['block'] ?? 0) > 0) {
           parts.add('${counts['block']}blk');
-        if ((counts['error'] ?? 0) > 0)
+        }
+        if ((counts['error'] ?? 0) > 0) {
           parts.add('${counts['error']}err');
+        }
         return parts.isEmpty ? '—' : parts.join(' · ');
       default: // football
         final parts = <String>[];

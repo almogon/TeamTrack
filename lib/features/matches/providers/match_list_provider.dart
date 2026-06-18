@@ -47,7 +47,6 @@ class MatchListNotifier extends FamilyAsyncNotifier<List<Match>, String> {
     state = await AsyncValue.guard(() => _fetch(teamId));
     return Match.fromJson(data);
   }
-}
 
   Future<void> _enforcePlanLimit(String teamId) async {
     try {
@@ -55,7 +54,7 @@ class MatchListNotifier extends FamilyAsyncNotifier<List<Match>, String> {
         'enforce-plan-limit',
         body: {'resource': 'match', 'teamId': teamId},
       );
-    } on FunctionsException catch (e) {
+    } on FunctionException catch (e) {
       if (e.status == 403) {
         final d = e.details;
         throw PlanLimitException(
