@@ -6,10 +6,15 @@ import '../../features/auth/notifiers/auth_notifier.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/matches/models/match.dart';
+import '../../features/matches/screens/create_match_screen.dart';
+import '../../features/matches/screens/live_match_screen.dart';
+import '../../features/matches/screens/match_summary_screen.dart';
 import '../../features/players/screens/add_player_screen.dart';
 import '../../features/players/screens/player_detail_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/teams/models/player.dart';
+import '../../features/teams/models/team.dart';
 import '../../features/teams/screens/create_team_screen.dart';
 import '../../features/teams/screens/team_detail_screen.dart';
 
@@ -54,6 +59,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => AddPlayerScreen(
           teamId: state.pathParameters['teamId']!,
           player: state.extra as Player?,
+        ),
+      ),
+      GoRoute(
+        path: '/teams/:teamId/matches/new',
+        builder: (_, state) =>
+            CreateMatchScreen(teamId: state.pathParameters['teamId']!),
+      ),
+      GoRoute(
+        path: '/teams/:teamId/matches/:matchId/live',
+        builder: (_, state) {
+          final args = state.extra! as ({Match match, Team team});
+          return LiveMatchScreen(match: args.match, team: args.team);
+        },
+      ),
+      GoRoute(
+        path: '/teams/:teamId/matches/:matchId/summary',
+        builder: (_, state) => MatchSummaryScreen(
+          matchId: state.pathParameters['matchId']!,
+          teamId: state.pathParameters['teamId']!,
         ),
       ),
     ],
