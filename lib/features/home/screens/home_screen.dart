@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../auth/providers/profile_provider.dart';
 import '../../teams/models/team.dart';
 import '../../teams/providers/teams_provider.dart';
 
@@ -11,11 +12,25 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final teamsAsync = ref.watch(teamsProvider);
+    final planLabel = ref.watch(profileProvider).value?.planLabel;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('TeamTrack'),
         actions: [
+          if (planLabel != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Center(
+                child: ActionChip(
+                  label: Text(planLabel,
+                      style: const TextStyle(fontSize: 11)),
+                  padding: EdgeInsets.zero,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  onPressed: () => context.push('/subscription'),
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => context.push('/settings'),

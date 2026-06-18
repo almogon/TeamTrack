@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../subscriptions/exceptions/plan_limit_exception.dart';
 import '../models/match.dart';
 
 class MatchListNotifier extends FamilyAsyncNotifier<List<Match>, String> {
@@ -28,6 +29,7 @@ class MatchListNotifier extends FamilyAsyncNotifier<List<Match>, String> {
     required String homeAway,
     String? competition,
   }) async {
+    await _enforcePlanLimit(teamId);
     final data = await Supabase.instance.client
         .from('matches')
         .insert({
@@ -44,6 +46,26 @@ class MatchListNotifier extends FamilyAsyncNotifier<List<Match>, String> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _fetch(teamId));
     return Match.fromJson(data);
+  }
+}
+
+  Future<void> _enforcePlanLimit(String teamId) async {
+    try {
+      await Supabase.instance.client.functions.invoke(
+        'enforce-plan-limit',
+        body: {'resource': 'match', 'teamId': teamId},
+      );
+    } on FunctionsException catch (e) {
+      if (e.status == 403) {
+        final d = e.details;
+        throw PlanLimitException(
+          plan: (d is Map ? d['plan'] : null) as String? ?? 'free',
+          limit: (d is Map ? d['limit'] : null) as int? ?? 2,
+          resource: 'match',
+        );
+      }
+      rethrow;
+    }
   }
 }
 

@@ -57,7 +57,7 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Create team'),
             trailing: atTeamLimit
                 ? Chip(
-                    label: Text('Limit reached'),
+                    label: const Text('Limit reached'),
                     backgroundColor:
                         Theme.of(context).colorScheme.errorContainer,
                     labelStyle: TextStyle(
@@ -68,14 +68,27 @@ class SettingsScreen extends ConsumerWidget {
                   )
                 : const Icon(Icons.chevron_right),
             onTap: atTeamLimit
-                ? () => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Upgrade your plan to create more than $teamLimit team${teamLimit == 1 ? '' : 's'}.',
-                        ),
-                      ),
-                    )
+                ? () => context.push('/subscription')
                 : () => context.push('/teams/new'),
+          ),
+          if (atTeamLimit)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
+              child: Text(
+                'Upgrade your plan to add more teams.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+              ),
+            ),
+          const Divider(),
+          _SectionLabel('Plan'),
+          ListTile(
+            leading: const Icon(Icons.workspace_premium_outlined),
+            title: const Text('Manage subscription'),
+            subtitle: Text('$planLabel plan'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/subscription'),
           ),
           const Divider(),
           _SectionLabel('Account'),

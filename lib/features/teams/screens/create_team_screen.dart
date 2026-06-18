@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../auth/providers/profile_provider.dart';
+import '../../subscriptions/exceptions/plan_limit_exception.dart';
 import '../models/sport_type.dart';
 import '../providers/teams_provider.dart';
 
@@ -49,21 +49,6 @@ class _CreateTeamScreenState extends ConsumerState<CreateTeamScreen> {
 
   Future<void> _createTeam() async {
     if (!_formKey.currentState!.validate()) return;
-
-    final profile = ref.read(profileProvider).value;
-    final teams = ref.read(teamsProvider).value ?? [];
-    final teamLimit = profile?.teamLimit;
-    if (profile != null && teamLimit != null && teams.length >= teamLimit) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Plan limit reached ($teamLimit team${teamLimit == 1 ? '' : 's'}). Upgrade to add more.',
-          ),
-        ),
-      );
-      return;
-    }
-
     setState(() => _loading = true);
     try {
       await ref.read(teamsProvider.notifier).createTeam(
@@ -75,6 +60,8 @@ class _CreateTeamScreenState extends ConsumerState<CreateTeamScreen> {
             season: _seasonController.text,
           );
       if (mounted) context.pop();
+    } on PlanLimitException catch (e) {
+      if (mounted) _showGateDialog(e);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -84,6 +71,29 @@ class _CreateTeamScreenState extends ConsumerState<CreateTeamScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _showGateDialog(PlanLimitException e) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Plan limit reached'),
+        content: Text(e.message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/subscription');
+            },
+            child: const Text('Upgrade'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
