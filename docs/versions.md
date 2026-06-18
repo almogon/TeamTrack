@@ -68,11 +68,13 @@
 - Update RLS on `teams` / `players`: members can SELECT their team; only owner can INSERT/UPDATE/DELETE
 
 **Plan limits (app-side check before insert):**
-| Plan | Max teams (owned) | Max matches per team |
-|------|-------------------|----------------------|
-| free | 1                 | 2 (trial)            |
-| pro  | 1                 | unlimited            |
-| plus | 3                 | unlimited            |
+| Plan | Max teams (owned + member) | Max matches per team |
+|------|---------------------------|----------------------|
+| free | 1                         | 2 (trial)            |
+| pro  | 1                         | unlimited            |
+| plus | 3                         | unlimited            |
+
+> The team cap counts **all** teams the user belongs to — whether they own the team or joined it via invite. This limit is enforced on team creation (V1) and on invite acceptance (V2).
 
 ### Frontend
 - **Auth**
@@ -109,6 +111,7 @@
 ### Design decisions
 - Invite by username (no email sent in V1 — just a code or in-app accept flow)
 - Member can view team and players; only owner can edit roster
+- **Plan limit check on accept**: before inserting into `team_members`, count all teams the invited user already belongs to (owned + member). If the count equals or exceeds their plan limit, the accept is blocked and a plan-upgrade prompt is shown. The invite row stays `pending` — the user can upgrade and accept later.
 
 ### Backend
 **New migration: `v2_invites`**
@@ -124,12 +127,20 @@
   - RLS: owner can insert; invited user (matched by `profiles.username`) can update status; owner can delete
 
 - Update RLS on `teams` SELECT: use `team_members` instead of `owner_id = auth.uid()`
-- `team_members` INSERT: triggered when invite is accepted
+- `team_members` INSERT: triggered when invite is accepted, **only after** the app-side plan limit check passes
+- Helper query for the plan check (runs before accepting):
+  ```sql
+  SELECT COUNT(*) FROM team_members WHERE user_id = <invited_user_id>;
+  -- compare result against profiles.plan limit (free/pro → 1, plus → 3)
+  ```
 
 ### Frontend
 - **Invite screen**: owner types username → creates invite row
 - **Notifications / pending invites**: home screen badge or dedicated screen listing pending invites
 - **Accept / reject invite** flow
+  - On tap "Accept": fetch the user's current team count and plan limit
+  - If count < limit → proceed; insert `team_members` row, mark invite `accepted`
+  - If count ≥ limit → block the accept, show an inline error: _"You've reached the [plan] plan limit of [N] team(s). Upgrade your plan to join more teams."_ with an **Upgrade** CTA; invite remains `pending`
 - Member team view: read-only roster (no add/edit/delete player)
 
 ---
