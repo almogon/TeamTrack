@@ -36,7 +36,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     }
   }
 
-  Future<void> _refresh() async {
+  void _refresh() {
     ref.invalidate(profileProvider);
     ref.invalidate(subscriptionProvider);
   }
@@ -45,9 +45,6 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileProvider);
     final subAsync = ref.watch(subscriptionProvider);
-
-    final currentPlan = profileAsync.value?.plan ?? 'free';
-    final periodEnd = subAsync.value?.currentPeriodEnd;
 
     return Scaffold(
       appBar: AppBar(
@@ -60,58 +57,83 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Current plan card
-          _PlanCard(plan: currentPlan, periodEnd: periodEnd),
-          const SizedBox(height: 24),
-
-          // Feature comparison
-          Text('Plans', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          _ComparisonTable(currentPlan: currentPlan),
-          const SizedBox(height: 24),
-
-          // Upgrade buttons
-          if (currentPlan == 'free') ...[
-            _UpgradeButton(
-              plan: 'pro',
-              label: 'Upgrade to Pro — \$9 / mo',
-              loading: _loadingPlan == 'pro',
-              onTap: () => _upgrade('pro'),
-            ),
-            const SizedBox(height: 12),
-            _UpgradeButton(
-              plan: 'plus',
-              label: 'Upgrade to Plus — \$19 / mo',
-              loading: _loadingPlan == 'plus',
-              onTap: () => _upgrade('plus'),
-            ),
-          ] else if (currentPlan == 'pro') ...[
-            _UpgradeButton(
-              plan: 'plus',
-              label: 'Upgrade to Plus — \$19 / mo',
-              loading: _loadingPlan == 'plus',
-              onTap: () => _upgrade('plus'),
-            ),
-          ] else
-            Center(
-              child: Chip(
-                avatar: const Icon(Icons.check_circle_outline, size: 16),
-                label: const Text('You are on the Plus plan'),
-              ),
-            ),
-
-          const SizedBox(height: 24),
-          Text(
-            'After payment, tap the refresh button above to update your plan.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
+      body: profileAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.error),
+                const SizedBox(height: 12),
+                Text('Could not load profile',
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _refresh,
+                  child: const Text('Retry'),
                 ),
-            textAlign: TextAlign.center,
+              ],
+            ),
           ),
-        ],
+        ),
+        data: (profile) {
+          final currentPlan = profile?.plan ?? 'free';
+          final periodEnd = subAsync.value?.currentPeriodEnd;
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _PlanCard(plan: currentPlan, periodEnd: periodEnd),
+              const SizedBox(height: 24),
+              Text('Plans',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              _ComparisonTable(currentPlan: currentPlan),
+              const SizedBox(height: 24),
+              if (currentPlan == 'free') ...[
+                _UpgradeButton(
+                  plan: 'pro',
+                  label: 'Upgrade to Pro — \$9 / mo',
+                  loading: _loadingPlan == 'pro',
+                  onTap: () => _upgrade('pro'),
+                ),
+                const SizedBox(height: 12),
+                _UpgradeButton(
+                  plan: 'plus',
+                  label: 'Upgrade to Plus — \$19 / mo',
+                  loading: _loadingPlan == 'plus',
+                  onTap: () => _upgrade('plus'),
+                ),
+              ] else if (currentPlan == 'pro') ...[
+                _UpgradeButton(
+                  plan: 'plus',
+                  label: 'Upgrade to Plus — \$19 / mo',
+                  loading: _loadingPlan == 'plus',
+                  onTap: () => _upgrade('plus'),
+                ),
+              ] else
+                Center(
+                  child: Chip(
+                    avatar:
+                        const Icon(Icons.check_circle_outline, size: 16),
+                    label: const Text('You are on the Plus plan'),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              Text(
+                'After payment, tap the refresh button above to update your plan.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -139,26 +161,31 @@ class _PlanCard extends StatelessWidget {
           children: [
             Icon(Icons.verified_outlined, size: 40, color: cs.primary),
             const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Current plan',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: cs.onPrimaryContainer,
-                        )),
-                Text(label,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: cs.onPrimaryContainer,
-                          fontWeight: FontWeight.bold,
-                        )),
-                if (periodEnd != null)
-                  Text(
-                    'Renews ${periodEnd!.day}/${periodEnd!.month}/${periodEnd!.year}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: cs.onPrimaryContainer,
-                        ),
-                  ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Current plan',
+                      style:
+                          Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: cs.onPrimaryContainer,
+                              )),
+                  Text(label,
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: cs.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                              )),
+                  if (periodEnd != null)
+                    Text(
+                      'Renews ${periodEnd!.day}/${periodEnd!.month}/${periodEnd!.year}',
+                      style:
+                          Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: cs.onPrimaryContainer,
+                              ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
@@ -176,13 +203,6 @@ class _ComparisonTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    Widget header(String text) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Text(text,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelLarge),
-        );
-
     Widget cell(String text, bool highlight) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Text(
@@ -195,7 +215,15 @@ class _ComparisonTable extends StatelessWidget {
           ),
         );
 
-    Widget row(String feature, String free, String pro, String plus) {
+    Widget headerCell(String text) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Text(text,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelLarge),
+        );
+
+    Widget tableRow(
+        String feature, String free, String pro, String plus) {
       return Container(
         decoration: BoxDecoration(
           border: Border(
@@ -209,15 +237,9 @@ class _ComparisonTable extends StatelessWidget {
                 child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     child: Text(feature))),
-            Expanded(
-                flex: 2,
-                child: cell(free, currentPlan == 'free')),
-            Expanded(
-                flex: 2,
-                child: cell(pro, currentPlan == 'pro')),
-            Expanded(
-                flex: 2,
-                child: cell(plus, currentPlan == 'plus')),
+            Expanded(flex: 2, child: cell(free, currentPlan == 'free')),
+            Expanded(flex: 2, child: cell(pro, currentPlan == 'pro')),
+            Expanded(flex: 2, child: cell(plus, currentPlan == 'plus')),
           ],
         ),
       );
@@ -231,15 +253,15 @@ class _ComparisonTable extends StatelessWidget {
             Row(
               children: [
                 const Expanded(flex: 3, child: SizedBox()),
-                Expanded(flex: 2, child: header('Free')),
-                Expanded(flex: 2, child: header('Pro')),
-                Expanded(flex: 2, child: header('Plus')),
+                Expanded(flex: 2, child: headerCell('Free')),
+                Expanded(flex: 2, child: headerCell('Pro')),
+                Expanded(flex: 2, child: headerCell('Plus')),
               ],
             ),
             const Divider(height: 1),
-            row('Teams', '1', '1', '3'),
-            row('Matches / team', '2', '∞', '∞'),
-            row('Price / mo', 'Free', '\$9', '\$19'),
+            tableRow('Teams', '1', '1', '3'),
+            tableRow('Matches / team', '2', '∞', '∞'),
+            tableRow('Price / mo', 'Free', '\$9', '\$19'),
           ],
         ),
       ),
@@ -262,15 +284,18 @@ class _UpgradeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: loading ? null : onTap,
-      child: loading
-          ? const SizedBox(
-              height: 18,
-              width: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Text(label),
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton(
+        onPressed: loading ? null : onTap,
+        child: loading
+            ? const SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Text(label),
+      ),
     );
   }
 }
