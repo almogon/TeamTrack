@@ -10,6 +10,7 @@ import '../../features/matches/models/match.dart';
 import '../../features/matches/screens/create_match_screen.dart';
 import '../../features/matches/screens/live_match_screen.dart';
 import '../../features/matches/screens/match_summary_screen.dart';
+import '../../features/subscriptions/screens/subscription_screen.dart';
 import '../../features/players/screens/add_player_screen.dart';
 import '../../features/players/screens/player_detail_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
@@ -36,6 +37,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+      GoRoute(path: '/subscription', builder: (_, _) => const SubscriptionScreen()),
       GoRoute(path: '/teams/new', builder: (_, _) => const CreateTeamScreen()),
       GoRoute(
         path: '/teams/:teamId',
