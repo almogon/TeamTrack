@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/match.dart';
 import '../models/stat_event.dart';
+import '../services/match_notification_service.dart';
 
 class LiveMatchState {
   const LiveMatchState({
@@ -152,8 +153,33 @@ class LiveMatchNotifier extends FamilyNotifier<LiveMatchState, String> {
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      state = state.copyWith(elapsedSeconds: state.elapsedSeconds + 1);
+      final next = state.elapsedSeconds + 1;
+      state = state.copyWith(elapsedSeconds: next);
+      _checkBreakPoint(next);
     });
+  }
+
+  void _checkBreakPoint(int seconds) {
+    final opponent = state.match?.opponent ?? '';
+    if (state.sport == 'football') {
+      final half = (state.format == '11' ? 45 : 25) * 60;
+      if (seconds == half) {
+        MatchNotificationService.showHalftimeAlert(opponent);
+      } else if (seconds == half * 2) {
+        MatchNotificationService.showMatchEnd(opponent);
+      }
+    } else if (state.sport == 'basketball') {
+      const quarterSeconds = 10 * 60;
+      for (var q = 1; q <= 3; q++) {
+        if (seconds == quarterSeconds * q) {
+          MatchNotificationService.showQuarterBreak(opponent, q);
+          return;
+        }
+      }
+      if (seconds == 4 * quarterSeconds) {
+        MatchNotificationService.showMatchEnd(opponent);
+      }
+    }
   }
 }
 
