@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../subscriptions/exceptions/plan_limit_exception.dart';
 import '../providers/match_list_provider.dart';
 
 class CreateMatchScreen extends ConsumerStatefulWidget {
@@ -41,6 +42,8 @@ class _CreateMatchScreenState extends ConsumerState<CreateMatchScreen> {
             competition: _competitionCtrl.text,
           );
       if (mounted) context.pop();
+    } on PlanLimitException catch (e) {
+      if (mounted) _showGateDialog(e);
     } on PostgrestException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -59,6 +62,29 @@ class _CreateMatchScreenState extends ConsumerState<CreateMatchScreen> {
       lastDate: DateTime(2100),
     );
     if (picked != null) setState(() => _matchDate = picked);
+  }
+
+  void _showGateDialog(PlanLimitException e) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Plan limit reached'),
+        content: Text(e.message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/subscription');
+            },
+            child: const Text('Upgrade'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
