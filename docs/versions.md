@@ -36,10 +36,11 @@
   username text UNIQUE NOT NULL
   display_name text
   avatar_url text
-  plan text NOT NULL DEFAULT 'free'  -- free | plus | pro
+  plan text NOT NULL DEFAULT 'free'  -- free | pro | plus
+  role text NOT NULL DEFAULT 'user'  -- user | manager | admin
   created_at, updated_at
   ```
-  - RLS: select own, update own
+  - RLS: select own, update own; admin/manager can select all
   - Trigger: auto-insert row on `auth.users` INSERT (via `handle_new_user` function)
 
 - `team_members` table
@@ -67,11 +68,13 @@
 - Update RLS on `teams` / `players`: members can SELECT their team; only owner can INSERT/UPDATE/DELETE
 
 **Plan limits (app-side check before insert):**
-| Plan | Max teams (owned or member) |
-|------|-----------------------------|
-| free | 1 |
-| plus | 3 |
-| pro  | 5 |
+| Plan | Max teams (owned + member) | Max matches per team |
+|------|---------------------------|----------------------|
+| free | 1                         | 2 (trial)            |
+| pro  | 1                         | unlimited            |
+| plus | 3                         | unlimited            |
+
+> The team cap counts **all** teams the user belongs to — whether they own the team or joined it via invite. This limit is enforced on team creation (V1) and on invite acceptance (V2).
 
 ### Frontend
 - **Auth**
@@ -91,6 +94,7 @@
 - **Settings**
   - Show current plan badge
   - Show team count vs. limit
+  - Show match count vs. limit (free plan: 2/2)
 
 - **Providers / models**
   - `ProfileModel`, `ProfilesProvider`
@@ -107,6 +111,7 @@
 ### Design decisions
 - Invite by username (no email sent in V1 — just a code or in-app accept flow)
 - Member can view team and players; only owner can edit roster
+- **Plan limit check on accept**: before inserting into `team_members`, count all teams the invited user already belongs to (owned + member). If the count equals or exceeds their plan limit, the accept is blocked and a plan-upgrade prompt is shown. The invite row stays `pending` — the user can upgrade and accept later.
 
 ### Backend
 **New migration: `v2_invites`**
@@ -122,12 +127,20 @@
   - RLS: owner can insert; invited user (matched by `profiles.username`) can update status; owner can delete
 
 - Update RLS on `teams` SELECT: use `team_members` instead of `owner_id = auth.uid()`
-- `team_members` INSERT: triggered when invite is accepted
+- `team_members` INSERT: triggered when invite is accepted, **only after** the app-side plan limit check passes
+- Helper query for the plan check (runs before accepting):
+  ```sql
+  SELECT COUNT(*) FROM team_members WHERE user_id = <invited_user_id>;
+  -- compare result against profiles.plan limit (free/pro → 1, plus → 3)
+  ```
 
 ### Frontend
 - **Invite screen**: owner types username → creates invite row
 - **Notifications / pending invites**: home screen badge or dedicated screen listing pending invites
 - **Accept / reject invite** flow
+  - On tap "Accept": fetch the user's current team count and plan limit
+  - If count < limit → proceed; insert `team_members` row, mark invite `accepted`
+  - If count ≥ limit → block the accept, show an inline error: _"You've reached the [plan] plan limit of [N] team(s). Upgrade your plan to join more teams."_ with an **Upgrade** CTA; invite remains `pending`
 - Member team view: read-only roster (no add/edit/delete player)
 
 ---
@@ -206,7 +219,7 @@
   current_period_end timestamptz
   ```
 - Supabase Edge Function `stripe-webhook`: listens for `checkout.session.completed` and `customer.subscription.updated` → updates `subscriptions` and `profiles.plan`
-- Edge Function `enforce-plan-limit`: called before team insert; returns 403 if over limit
+- Edge Function `enforce-plan-limit`: called before team or match insert; returns 403 if over team or match limit for the plan
 - Update RLS / policies so plan check can run as `service_role` in the edge function
 
 ### Frontend
@@ -241,6 +254,88 @@
 - **Leaderboard screen** on Team Detail: ranked list of players by points for selected season
 - **Match history screen**: list of past matches with score + top performer
 - **Match summary** (expand V3): show MVP (highest points in match)
+
+---
+
+## Version 6 — League system
+
+**Goal:** Allow groups of teams to compete in a structured seasonal league.
+
+### Design decisions
+- Any user can request to create a league, but it must be validated by an `admin` or `manager` before it becomes active
+- League season always runs **1 July → 30 June** (fixed calendar, not configurable in V6)
+- A team can belong to only one league at a time
+- When a league season ends, the system auto-creates the next season's edition in `default_leagues` so the league persists without manual recreation
+- Teams discover leagues by city or zip code
+
+### Backend
+**New migration: `v6_leagues`**
+- `leagues` table
+  ```
+  id uuid PK
+  name text NOT NULL
+  city text NOT NULL
+  zip_code text NOT NULL
+  season text NOT NULL  -- e.g. '2026-2027'
+  status text NOT NULL DEFAULT 'pending'  -- pending | active | finished
+  created_by uuid → auth.users(id)
+  validated_by uuid → auth.users(id)  -- set by admin/manager on approval
+  created_at timestamptz
+  ```
+  - RLS: any authenticated user can INSERT (pending); admin/manager can UPDATE status; all can SELECT active
+
+- `league_teams` table
+  ```
+  league_id uuid → leagues(id)
+  team_id uuid → teams(id)
+  joined_at timestamptz
+  PRIMARY KEY (league_id, team_id)
+  UNIQUE (team_id)  -- one league per team
+  ```
+  - RLS: team owner can insert; admin/manager or owner can delete
+
+- `default_leagues` table (canonical registry for auto-renewal)
+  ```
+  id uuid PK
+  name text NOT NULL
+  city text NOT NULL
+  zip_code text NOT NULL
+  -- Each season a new row is inserted in `leagues` referencing this record
+  ```
+
+- DB function `rollover_leagues()`: called at season end (or via scheduled Edge Function); inserts next-season rows into `leagues` for every active entry in `default_leagues`
+
+### Frontend
+- **Discover leagues screen**: search by city or zip code; list of active leagues with join button
+- **Create league screen**: name, city, zip code → status = `pending`; user sees "awaiting validation" state
+- **League detail screen**: standings table, list of member teams, season dates
+- **Admin validation flow** (admin/manager role only): pending league list → approve / reject
+- Update **team detail screen**: show current league badge if enrolled
+
+---
+
+## Version 7 — Admin & manager analytics platform
+
+**Goal:** A web platform (separate from the trainer app) accessible only to `admin` and `manager` users, offering cross-team and cross-league analytics.
+
+### Design decisions
+- Separate web app (Next.js or similar), authenticated via the same Supabase project
+- Access gated by `profiles.role IN ('admin', 'manager')`; enforced via RLS and Edge Function middleware
+- Read-only in V7 (no data mutation from this platform)
+- Depends on V6 (leagues) and V5 (player scores)
+
+### Backend
+- No new tables required; platform queries existing views and tables
+- New DB view `platform_top_players`: cross-team ranking by total season points (all leagues)
+- New DB view `platform_league_standings`: per-league team standings with win/draw/loss/points
+- Edge Function `admin-auth-check`: validates `manager` or `admin` role on every API call from the platform
+
+### Frontend (web platform)
+- **Dashboard**: summary cards — total active leagues, total teams, total players, top scorer of the week
+- **League browser**: all leagues with standings and team lists
+- **Player leaderboard**: global ranking by season points, filterable by league / sport / season
+- **Team analysis**: per-team stat breakdown, player performance comparison
+- **Pending validations panel** (admin only): approve/reject league creation requests
 
 ---
 

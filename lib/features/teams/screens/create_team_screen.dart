@@ -52,11 +52,12 @@ class _CreateTeamScreenState extends ConsumerState<CreateTeamScreen> {
 
     final profile = ref.read(profileProvider).value;
     final teams = ref.read(teamsProvider).value ?? [];
-    if (profile != null && teams.length >= profile.teamLimit) {
+    final teamLimit = profile?.teamLimit;
+    if (profile != null && teamLimit != null && teams.length >= teamLimit) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Plan limit reached (${profile.teamLimit} team${profile.teamLimit == 1 ? '' : 's'}). Upgrade to add more.',
+            'Plan limit reached ($teamLimit team${teamLimit == 1 ? '' : 's'}). Upgrade to add more.',
           ),
         ),
       );

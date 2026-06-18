@@ -5,6 +5,7 @@ class Profile {
     this.displayName,
     this.avatarUrl,
     required this.plan,
+    required this.role,
     required this.createdAt,
   });
 
@@ -13,13 +14,13 @@ class Profile {
   final String? displayName;
   final String? avatarUrl;
   final String plan;
+  final String role;
   final DateTime createdAt;
 
-  int get teamLimit => switch (plan) {
-        'plus' => 3,
-        'pro' => 5,
-        _ => 1,
-      };
+  // null means unlimited (admin bypasses all limits; manager follows plan limits)
+  // Plans: free = 1 team / 2 matches; pro = 1 team / unlimited; plus = 3 teams / unlimited
+  int? get teamLimit => role == 'admin' ? null : (plan == 'plus' ? 3 : 1);
+  int? get matchLimit => role == 'admin' ? null : (plan == 'free' ? 2 : null);
 
   String get planLabel => switch (plan) {
         'plus' => 'Plus',
@@ -33,6 +34,7 @@ class Profile {
         displayName: json['display_name'] as String?,
         avatarUrl: json['avatar_url'] as String?,
         plan: json['plan'] as String? ?? 'free',
+        role: json['role'] as String? ?? 'user',
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 }

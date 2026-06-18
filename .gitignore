@@ -41,6 +41,13 @@ flutter_export_environment.sh
 
 # Claude Code local settings
 .claude/settings.local.json
+.mcp.json
+
+# Conversation memories
+memories/
+
+# Local agents
+agents/
 
 # Environment variables
 .env
@@ -61,3 +68,4 @@ app.*.map.json
 
 docs/
 .vscode
+pubspec.lock

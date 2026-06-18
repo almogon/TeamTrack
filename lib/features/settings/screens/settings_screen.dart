@@ -23,8 +23,10 @@ class SettingsScreen extends ConsumerWidget {
             as String? ??
         'User';
     final planLabel = profileAsync.value?.planLabel ?? 'Free';
-    final teamLimit = profileAsync.value?.teamLimit ?? 1;
+    final int? teamLimit = profileAsync.value?.teamLimit; // null = unlimited
     final teamCount = teamsAsync.value?.length ?? 0;
+    final matchLimit = profileAsync.value?.matchLimit;
+    final atTeamLimit = teamLimit != null && teamCount >= teamLimit;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -44,7 +46,8 @@ class SettingsScreen extends ConsumerWidget {
             ),
             title: Text('@$username'),
             subtitle: Text(
-              '$planLabel plan · $teamCount / $teamLimit team${teamLimit == 1 ? '' : 's'}',
+              '$planLabel plan · $teamCount / ${teamLimit?.toString() ?? '∞'} team${teamLimit == 1 ? '' : 's'}'
+              '${matchLimit != null ? ' · $matchLimit match limit' : ''}',
             ),
           ),
           const Divider(),
@@ -52,7 +55,7 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.add_circle_outline),
             title: const Text('Create team'),
-            trailing: teamCount >= teamLimit
+            trailing: atTeamLimit
                 ? Chip(
                     label: Text('Limit reached'),
                     backgroundColor:
@@ -64,7 +67,7 @@ class SettingsScreen extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                   )
                 : const Icon(Icons.chevron_right),
-            onTap: teamCount >= teamLimit
+            onTap: atTeamLimit
                 ? () => ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
