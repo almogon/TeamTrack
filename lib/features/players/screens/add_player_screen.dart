@@ -49,7 +49,7 @@ class _AddPlayerScreenState extends ConsumerState<AddPlayerScreen> {
     super.dispose();
   }
 
-  Future<void> _submit(List<Position> positions) async {
+  Future<void> _submit(List<Position> positions, {required bool addMore}) async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
@@ -79,7 +79,19 @@ class _AddPlayerScreenState extends ConsumerState<AddPlayerScreen> {
       }
 
       ref.invalidate(teamDetailProvider(widget.teamId));
-      if (mounted) context.pop();
+
+      if (!mounted) return;
+      if (addMore) {
+        _nameController.clear();
+        _aliasController.clear();
+        _numberController.clear();
+        setState(() => _selectedPosition = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Player added — form cleared')),
+        );
+      } else {
+        context.pop();
+      }
     } on PostgrestException catch (e) {
       if (mounted) {
         final msg = e.code == '23505'
@@ -170,11 +182,43 @@ class _AddPlayerScreenState extends ConsumerState<AddPlayerScreen> {
                             setState(() => _selectedPosition = v),
                       ),
                       const SizedBox(height: 32),
-                      PrimaryButton(
-                        label: _isEdit ? 'Save' : 'Add player',
-                        onPressed: _loading ? null : () => _submit(positions),
-                        loading: _loading,
-                      ),
+                      if (_isEdit)
+                        PrimaryButton(
+                          label: 'Save',
+                          onPressed: _loading
+                              ? null
+                              : () => _submit(positions, addMore: false),
+                          loading: _loading,
+                        )
+                      else
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _loading
+                                    ? null
+                                    : () => _submit(positions, addMore: true),
+                                child: const Text('Add more'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: _loading
+                                    ? null
+                                    : () => _submit(positions, addMore: false),
+                                child: _loading
+                                    ? const SizedBox(
+                                        height: 18,
+                                        width: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      )
+                                    : const Text('Confirm'),
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
