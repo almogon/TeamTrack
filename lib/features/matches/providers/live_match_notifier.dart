@@ -160,7 +160,7 @@ class LiveMatchNotifier extends FamilyNotifier<LiveMatchState, String> {
   }
 
   void _checkBreakPoint(int seconds) {
-    final opponent = state.match?.opponent ?? '';
+    final opponent = state.match?.opponentName ?? '';
     if (state.sport == 'football') {
       final half = (state.format == '11' ? 45 : 25) * 60;
       if (seconds == half) {

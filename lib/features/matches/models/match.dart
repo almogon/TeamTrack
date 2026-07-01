@@ -3,8 +3,10 @@ class Match {
     required this.id,
     required this.teamId,
     required this.matchDate,
-    required this.opponent,
-    required this.homeAway,
+    this.localTeamId,
+    this.localTeamName,
+    this.visitantTeamId,
+    this.visitantTeamName,
     this.competition,
     this.notes,
     this.scoreFor,
@@ -20,8 +22,15 @@ class Match {
   final String id;
   final String teamId;
   final DateTime matchDate;
-  final String opponent;
-  final String homeAway;
+
+  // Local (home) side — one of id or name is always set.
+  final String? localTeamId;
+  final String? localTeamName;
+
+  // Visitant (away) side — one of id or name is always set.
+  final String? visitantTeamId;
+  final String? visitantTeamName;
+
   final String? competition;
   final String? notes;
   final int? scoreFor;
@@ -33,6 +42,15 @@ class Match {
   final int period;
   final DateTime createdAt;
 
+  // Our team owns the match (teamId). If we set localTeamId = teamId we're home;
+  // if we set visitantTeamId = teamId we're away.
+  bool get isHome => localTeamId != null;
+
+  String get opponentName {
+    if (isHome) return visitantTeamName ?? 'Unknown';
+    return localTeamName ?? 'Unknown';
+  }
+
   bool get isScheduled => status == 'scheduled';
   bool get isLive => status == 'live';
   bool get isPaused => status == 'paused';
@@ -43,8 +61,10 @@ class Match {
         id: json['id'] as String,
         teamId: json['team_id'] as String,
         matchDate: DateTime.parse(json['match_date'] as String),
-        opponent: json['opponent'] as String,
-        homeAway: json['home_away'] as String,
+        localTeamId: json['local_team_id'] as String?,
+        localTeamName: json['local_team_name'] as String?,
+        visitantTeamId: json['visitant_team_id'] as String?,
+        visitantTeamName: json['visitant_team_name'] as String?,
         competition: json['competition'] as String?,
         notes: json['notes'] as String?,
         scoreFor: json['score_for'] as int?,

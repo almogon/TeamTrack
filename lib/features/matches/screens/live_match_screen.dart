@@ -125,7 +125,7 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('vs ${widget.match.opponent}'),
+        title: Text('vs ${widget.match.opponentName}'),
         centerTitle: true,
       ),
       body: Column(

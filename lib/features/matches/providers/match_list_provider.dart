@@ -35,8 +35,15 @@ class MatchListNotifier extends FamilyAsyncNotifier<List<Match>, String> {
         .insert({
           'team_id': teamId,
           'match_date': _dateFmt.format(matchDate),
-          'opponent': opponent.trim(),
-          'home_away': homeAway,
+          // Home: our team is local, opponent is the visitant name.
+          // Away: opponent is the local name, our team is visitant.
+          if (homeAway == 'home') ...{
+            'local_team_id': teamId,
+            'visitant_team_name': opponent.trim(),
+          } else ...{
+            'local_team_name': opponent.trim(),
+            'visitant_team_id': teamId,
+          },
           if (competition != null && competition.trim().isNotEmpty)
             'competition': competition.trim(),
           'status': 'scheduled',

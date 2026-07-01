@@ -79,7 +79,7 @@ class MatchSummaryScreen extends ConsumerWidget {
                 '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
             return Scaffold(
-              appBar: AppBar(title: Text('vs ${match.opponent}')),
+              appBar: AppBar(title: Text('vs ${match.opponentName}')),
               body: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -101,7 +101,7 @@ class MatchSummaryScreen extends ConsumerWidget {
                                 size: 16,
                                 color: Theme.of(context).colorScheme.primary),
                             const SizedBox(width: 4),
-                            Text(match.homeAway == 'home' ? 'Home' : 'Away'),
+                            Text(match.isHome ? 'Home' : 'Away'),
                           ]),
                           if (match.competition != null) ...[
                             const SizedBox(height: 4),
@@ -129,6 +129,33 @@ class MatchSummaryScreen extends ConsumerWidget {
                       ),
                     )
                   else ...[
+                    // MVP badge — top scorer with at least 1 point
+                    if (sorted.first.value.points > 0) ...[
+                      Card(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.emoji_events,
+                            color: Color(0xFFFFD700),
+                            size: 28,
+                          ),
+                          title: const Text('MVP'),
+                          subtitle: Text(
+                            playerById[sorted.first.key]?.displayName ??
+                                'Unknown',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          trailing: Text(
+                            '${sorted.first.value.points} pts',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     Text('Player stats',
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
