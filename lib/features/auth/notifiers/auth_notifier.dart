@@ -11,13 +11,18 @@ class AuthNotifier extends ChangeNotifier {
     });
   }
 
-  late final StreamSubscription<AuthState> _sub;
+  @visibleForTesting
+  AuthNotifier.forTesting() {
+    _sub = null;
+  }
+
+  late final StreamSubscription<AuthState>? _sub;
 
   bool get isLoggedIn => Supabase.instance.client.auth.currentSession != null;
 
   @override
   void dispose() {
-    _sub.cancel();
+    _sub?.cancel();
     super.dispose();
   }
 }
