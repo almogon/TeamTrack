@@ -112,7 +112,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     validator: (v) =>
                         Validators.requiredText(v, label: 'Password'),
                   ),
-                  const SizedBox(height: 24),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => context.push('/forgot-password'),
+                      child: const Text('Forgot password?'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   PrimaryButton(
                     label: 'Sign in',
                     onPressed: _loading ? null : _signIn,

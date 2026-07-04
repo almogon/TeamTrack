@@ -16,6 +16,15 @@ class Validators {
     return null;
   }
 
+  static String? email(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Email is required';
+    final trimmed = value.trim();
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(trimmed)) {
+      return 'Enter a valid email';
+    }
+    return null;
+  }
+
   static String? username(String? value) {
     if (value == null || value.trim().isEmpty) return 'Username is required';
     final trimmed = value.trim();

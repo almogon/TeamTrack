@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/notifiers/auth_notifier.dart';
+import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/home/screens/home_screen.dart';
@@ -27,7 +28,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (BuildContext context, GoRouterState state) {
       final isLoggedIn = authNotifier.isLoggedIn;
       final isAuthRoute = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
+          state.matchedLocation == '/register' ||
+          state.matchedLocation == '/forgot-password';
       if (!isLoggedIn && !isAuthRoute) return '/login';
       if (isLoggedIn && isAuthRoute) return '/home';
       return null;
@@ -35,6 +37,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, _) => const ForgotPasswordScreen(),
+      ),
       GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
       GoRoute(path: '/subscription', builder: (_, _) => const SubscriptionScreen()),
