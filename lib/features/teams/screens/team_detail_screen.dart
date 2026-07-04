@@ -11,9 +11,14 @@ import '../providers/leaderboard_provider.dart';
 import '../providers/team_provider.dart';
 
 class TeamDetailScreen extends ConsumerWidget {
-  const TeamDetailScreen({super.key, required this.teamId});
+  const TeamDetailScreen({
+    super.key,
+    required this.teamId,
+    this.initialTabIndex = 0,
+  });
 
   final String teamId;
+  final int initialTabIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,6 +34,7 @@ class TeamDetailScreen extends ConsumerWidget {
       ),
       data: (detail) => DefaultTabController(
         length: 3,
+        initialIndex: initialTabIndex,
         child: Scaffold(
           appBar: AppBar(
             title: Text(detail.team.name),
