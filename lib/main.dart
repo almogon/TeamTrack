@@ -6,6 +6,7 @@ import 'core/config/app_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/web/url_strategy.dart';
+import 'features/auth/notifiers/auth_notifier.dart';
 import 'features/matches/services/match_notification_service.dart';
 
 Future<void> main() async {
@@ -15,6 +16,13 @@ Future<void> main() async {
   // collides with GoRouter's default "#/route" hash strategy and silently
   // breaks session detection. No-op on non-web platforms.
   configureUrlStrategy();
+  // Must be read before Supabase.initialize(), which processes this same
+  // URL internally and fires AuthChangeEvent.passwordRecovery before any
+  // app-level listener exists to catch it (see AuthNotifier).
+  final initialUri = Uri.base;
+  AuthNotifier.pendingPasswordRecovery =
+      initialUri.fragment.contains('type=recovery') ||
+          initialUri.queryParameters['type'] == 'recovery';
   AppConfig.validate();
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,

@@ -6,6 +6,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthNotifier extends ChangeNotifier {
   AuthNotifier() {
+    // supabase_flutter fully processes the recovery deep link (including
+    // firing AuthChangeEvent.passwordRecovery) inside `Supabase.initialize()`,
+    // which completes *before* this notifier is ever constructed — so
+    // subscribing to onAuthStateChange here always misses that first event.
+    // `pendingPasswordRecovery` is set synchronously in main() from the raw
+    // incoming URL, before that race can happen, and consumed once here.
+    _isPasswordRecovery = pendingPasswordRecovery;
+    pendingPasswordRecovery = false;
     _sub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.passwordRecovery) {
         _isPasswordRecovery = true;
@@ -18,6 +26,10 @@ class AuthNotifier extends ChangeNotifier {
   AuthNotifier.forTesting() {
     _sub = null;
   }
+
+  /// Set once in `main()`, before `Supabase.initialize()` runs, by checking
+  /// the incoming URL for the recovery-link marker. See constructor comment.
+  static bool pendingPasswordRecovery = false;
 
   late final StreamSubscription<AuthState>? _sub;
 
