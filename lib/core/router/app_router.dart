@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -26,6 +26,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     refreshListenable: authNotifier,
     initialLocation: '/home',
+    // Reached when a URL doesn't match any route — e.g. an expired/invalid
+    // Supabase auth link, whose error redirect (error=access_denied&...)
+    // isn't a real app location. Bounce to /login instead of showing the
+    // raw "no routes for location" crash page.
+    errorBuilder: (context, state) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go('/login');
+      });
+      return const Scaffold(body: SizedBox.shrink());
+    },
     redirect: (BuildContext context, GoRouterState state) {
       final isLoggedIn = authNotifier.isLoggedIn;
       final isUpdatePasswordRoute =
