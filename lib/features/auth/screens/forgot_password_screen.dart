@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/widgets/primary_button.dart';
 
@@ -30,6 +31,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     try {
       await Supabase.instance.client.auth.resetPasswordForEmail(
         _emailController.text.trim(),
+        // No route baked into this URL: Supabase appends "?code=..." to
+        // whatever we pass, and if the URL already has a "#" fragment (as
+        // Flutter web's hash-based routing requires), the code ends up
+        // inside the fragment instead of a real query string and never
+        // gets picked up. Land on the bare domain and let the
+        // passwordRecovery auth-event listener (see AuthNotifier /
+        // app_router) route to /update-password once the session exists.
+        redirectTo: AppConfig.webAppUrl,
       );
       if (mounted) setState(() => _sent = true);
     } on AuthException catch (e) {

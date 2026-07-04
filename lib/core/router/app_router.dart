@@ -6,6 +6,7 @@ import '../../features/auth/notifiers/auth_notifier.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
+import '../../features/auth/screens/update_password_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/matches/models/match.dart';
 import '../../features/matches/screens/create_match_screen.dart';
@@ -27,11 +28,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/home',
     redirect: (BuildContext context, GoRouterState state) {
       final isLoggedIn = authNotifier.isLoggedIn;
+      final isUpdatePasswordRoute =
+          state.matchedLocation == '/update-password';
+      // A password-recovery email link always establishes a session, which
+      // would otherwise make the redirect below treat the user as "logged
+      // in" and bounce them straight to /home before they set a new password.
+      if (authNotifier.isPasswordRecovery) {
+        return isUpdatePasswordRoute ? null : '/update-password';
+      }
       final isAuthRoute = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
           state.matchedLocation == '/forgot-password';
       if (!isLoggedIn && !isAuthRoute) return '/login';
       if (isLoggedIn && isAuthRoute) return '/home';
+      if (isUpdatePasswordRoute) return '/home';
       return null;
     },
     routes: [
@@ -40,6 +50,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/forgot-password',
         builder: (_, _) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/update-password',
+        builder: (_, _) => const UpdatePasswordScreen(),
       ),
       GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
