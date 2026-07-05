@@ -10,6 +10,7 @@ class Team {
     required this.format,
     this.minPlayers,
     this.maxPlayers,
+    this.lineupFormation,
     required this.createdAt,
   });
 
@@ -21,6 +22,7 @@ class Team {
   final String format;
   final int? minPlayers;
   final int? maxPlayers;
+  final String? lineupFormation;
   final DateTime createdAt;
 
   SportType get sportType => SportType.fromValue(sport);
@@ -36,6 +38,7 @@ class Team {
         format: json['format'] as String? ?? '11',
         minPlayers: json['min_players'] as int?,
         maxPlayers: json['max_players'] as int?,
+        lineupFormation: json['lineup_formation'] as String?,
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 }

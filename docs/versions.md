@@ -371,8 +371,8 @@
 - This is a frontend-only reshape of the existing Home screen — no new tables, no new providers beyond what `teamsProvider` / `teamDetailProvider` already expose.
 - **Empty state** (no teams): a single large circular button with a plus icon, centered — replaces the old icon+text+button empty state.
 - **One team**: show a formation view of that team's active players.
-- **Multiple teams**: the formation view becomes a swipeable `PageView` carousel (one page per team) with small page-indicator dots; footer actions apply to whichever team page is currently visible.
-- **Formation layout**: players are grouped by their `position` field and rendered as centered rows, ordered attack-line-first / defensive-line-last (the reverse of each sport's `Position` list in `sport_type.dart` — e.g. football becomes FWD → MID → DEF → GK, matching the mockup's 3-3-4 diamond pyramid). This is a simplification: it reflects *how many players are assigned to each position*, not a true tactical 4-3-3 grid with fixed x/y coordinates. Players without a position (or basketball/volleyball, which don't have a natural attack/defense axis) still render via the same reversed-list grouping for consistency, just without special meaning. Players are drawn as tappable diamonds (rotated squares) showing shirt number, opening the existing player detail screen on tap.
+- **Multiple teams**: the formation view becomes a swipeable `PageView` carousel (one page per team) with small page-indicator dots; footer actions apply to whichever team page is currently visible. Wrapped in a `ScrollConfiguration` that adds `PointerDeviceKind.mouse` to `dragDevices` — Flutter's default `ScrollBehavior` only allows touch/stylus/trackpad to drag-scroll (mouse is excluded by default, reserved for text selection), so click-and-drag with a mouse silently did nothing until this was added.
+- **Formation layout (superseded by Line-Up management below)**: originally, players were grouped purely by their own `position` field (reverse of `sport_type.dart`'s `Position` list — football: FWD → MID → DEF → GK). Once the Line-Up tab landed, the main menu was switched to render the team's **actual saved line-up** instead (same formation shape and slot assignments as the Line-Up tab, including placeholders for empty slots), so the two views always show the identical disposition — see Line-Up management. Players are still drawn as tappable diamonds (rotated squares) showing shirt number; tapping a filled slot opens the player detail screen, tapping a placeholder does nothing (editing only happens in the Line-Up tab).
 - Diamonds use the app's theme primary color (not the mockup's placeholder orange) to stay consistent with the rest of the UI.
 - **Top bar**: keep the existing plan-badge chip alongside the settings icon (top right, per design) — dropping it would be a regression with no benefit.
 - **Oval footer** (per mockup, left → right):
@@ -382,8 +382,54 @@
 
 ### Frontend
 - `lib/features/teams/models/sport_type.dart`: add `SportType.formationOrder` (reversed `positions` list).
-- `lib/features/home/widgets/formation_view.dart`: `FormationView` (groups players into rows by `formationOrder`, unassigned players in a trailing row) + `PlayerDiamond` (rotated-square tappable token showing shirt number).
+- `lib/shared/widgets/player_diamond.dart`: `PlayerDiamond` (rotated-square tappable token showing shirt number) — originally lived under `home/widgets/`, moved to `shared/` once the Line-Up tab needed to reuse it too (see Line-Up management).
 - `lib/features/home/widgets/main_menu_footer.dart`: `MainMenuFooter`, the oval `StadiumBorder` bottom bar with the 3 actions above.
-- `lib/features/home/screens/home_screen.dart`: rewritten — empty/single/carousel states as described above, footer wired to the active team.
+- `lib/features/home/screens/home_screen.dart`: rewritten — empty/single/carousel states as described above, footer wired to the active team. (Its formation rendering was later swapped to `LineupGridView`; see Line-Up management.)
 - `lib/features/teams/screens/team_detail_screen.dart`: `TeamDetailScreen` gains `initialTabIndex` (default `0`); `DefaultTabController` uses it as `initialIndex`.
 - `lib/core/router/app_router.dart`: `/teams/:teamId` route reads `state.extra as int?` for the initial tab index.
+
+---
+
+## Line-Up management
+
+**Goal:** Let a trainer pick a formation shape (e.g. 4-4-2, 4-3-3) for their team and assign specific players to each slot, from a new "Line-Up" tab on Team Detail. The main menu shows the chosen formation's name under the team's sport/format label.
+
+### Design decisions
+- The list of available formations (which shapes exist, and which position each slot represents) is a **hardcoded Dart list**, not a DB table — formations are a fixed piece of app logic, not data a trainer edits, so fetching them from the database would just be network latency for no benefit.
+- What's *chosen* and *who's assigned* are per-team state and must persist across sessions/devices, so that part **does** live in the DB: `teams.lineup_formation` (which shape is selected) + a new `lineup_slots` table (which player, if any, occupies each slot).
+- A slot holds at most one player; assigning a player who already occupies another slot moves them (no duplicates). A slot can be empty — rendered as a dashed placeholder diamond.
+- **Changing formation smart-remaps instead of resetting**: players keep their own role's slots where possible (e.g. DEF stays DEF). When a role shrinks, the overflow cascades *forward* (toward attack) into the next role that has room — e.g. 4-4-2 → 4-3-3 keeps all 4 DEF, keeps 3 of the 4 MID in place, and the 4th MID moves into the new 3rd FWD slot. Overflow that still doesn't fit after the most attacking role falls back to the bench. See `LineupFormation.remapAssignments`.
+- Slot assignment is **free-form**: a trainer can put any active player in any slot, regardless of that player's own `position` field. The formation only fixes *how many* slots of each role exist and where they sit in the layout, not who's allowed in them.
+- **Everything is local/pending until "Save"** — picking a formation, moving players, and reassigning slots only touch in-memory widget state; nothing reaches Supabase until the Save button is tapped, which persists `teams.lineup_formation` and replaces all `lineup_slots` rows for the team in one go. Leaving the tab (or the screen) without saving discards the pending edits — there's no unsaved-changes prompt in this version.
+- Active players not currently placed in a slot are listed in a **Bench** section below the grid (a team can have up to 18 players), using the existing player-list style. Assignment has two equivalent paths: tap a slot to open the player-picker sheet (which also shows each player's `position`), or drag a bench player directly onto a slot — both call the same `_assignPlayerToSlot` logic, so there's one source of truth for "what happens when a player is assigned," just two ways to trigger it.
+- Bench items use a plain `Draggable` (immediate drag on pointer-down), not `LongPressDraggable`. `LongPressDraggable` was tried first to avoid competing with scrolling a long bench list, but its ~500ms hold-before-drag made it look completely broken with a normal mouse click-and-drag (the main way this app gets tested in this environment) — nothing happened unless you held first, which isn't an obvious first move on desktop. Immediate `Draggable` trades a little touch-scroll friction over the bench (14+ players max, so a minor cost) for drag actually working the way a user expects to try it.
+- **The main menu renders the exact same disposition as this tab**: same formation shape, same filled/placeholder slots — both share `LineupGridView` (`lib/features/teams/widgets/lineup_grid_view.dart`). The main menu shows whatever was last *saved*; unsaved edits made in the Line-Up tab aren't reflected there until Save is tapped. If a team has never saved a line-up, the main menu defaults to the sport's first hardcoded formation (all placeholders), matching the tab's own first-visit default (UC1) — this keeps the two views consistent instead of one showing a fallback and the other showing nothing. The main menu's grid is read-only: tapping a filled slot opens that player's detail screen (as before), tapping a placeholder does nothing — all editing stays in the Line-Up tab.
+- Only football gets multiple real shapes (4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 3-4-3 for 11-a-side; smaller sets for 7 and 5-a-side). Basketball and volleyball don't have an equivalent "formation" concept in this app, so each gets one flat, single-row shape covering all on-court positions.
+
+### Use cases
+- **UC1 — Open the Line-Up tab for the first time**: no formation saved yet → the formation combobox defaults to the sport's first hardcoded option and the grid renders immediately (all placeholders) — there's no separate "pick before you see the grid" step.
+- **UC2 — Change formation**: trainer picks a different option from the combobox → slots are recomputed by the smart-remap rule above (same-role players stay, overflow cascades forward, excess falls to the bench) → Save becomes enabled.
+- **UC3 — Assign a player to a slot**: trainer taps an empty (or filled) slot → a sheet lists the team's active players, unassigned players first and already-assigned-elsewhere ones after (each row also shows their own `position` next to their name; current occupant checked). A row of position filter chips ("All" + the sport's own positions, e.g. GK/DEF/MID/FWD) narrows the list to just that position — tapping the active chip again clears the filter back to "All". Picking a player fills the slot locally; if they already occupied a different slot, that slot is cleared. A "Clear this slot" option empties a filled slot.
+- **UC4 — Review the bench, or drag a bench player into a slot**: players not in any slot are listed under the grid so the trainer can see who's left out before saving. Each bench row is also draggable — dropping it on any slot (filled or empty) assigns that player there via the same logic as UC3 (the slot highlights while a drag hovers over it). Tap-to-pick (UC3) and drag-and-drop are two paths to the same assignment action, not separate states.
+- **UC5 — Save**: trainer taps Save → the formation and all slot assignments are written to Supabase in one action; the button disables again until another change is made.
+- **UC6 — See the current line-up from the main menu**: after saving, the trainer returns to the main menu (Home) → under the team's sport/format label (e.g. "Football 11"), the saved formation's name is shown (e.g. "4-3-3") and the same slot grid (filled players + placeholders for empty slots) renders below it, identical to what was just saved in the Line-Up tab.
+
+### Backend
+**New migration**
+- Alter `teams`: add `lineup_formation text` (nullable; formation key like `'4-3-3'`, matched against the hardcoded frontend list — no DB-side validation of the value, since the valid set lives in the app)
+- `lineup_slots` table
+  ```
+  team_id uuid → teams(id) on delete cascade
+  slot_index int                 -- position within the chosen formation's slot list
+  player_id uuid → players(id) on delete set null
+  PRIMARY KEY (team_id, slot_index)
+  ```
+  - RLS mirrors the current (V1 `team_members` not yet implemented) owner-only policy already used by `teams`/`players`: owner of the team can SELECT/INSERT/UPDATE/DELETE their own team's slots.
+
+### Frontend
+- `lib/features/teams/models/lineup_formation.dart`: hardcoded `LineupFormation` list per sport + format (key, label, ordered list of position codes — list index = `slot_index`).
+- `lib/features/teams/providers/lineup_provider.dart`: `teamLineupProvider(teamId)` — read-only (formation key + `slot_index → Player` map). In the Line-Up tab it's used once to seed local editing state (mutated locally, written back only by Save); on the main menu it's watched directly and rendered live (read-only, nothing to save there).
+- `lib/features/teams/models/lineup_formation.dart`: also holds `LineupFormation.remapAssignments`, the smart-remap algorithm used on formation change.
+- `lib/features/teams/widgets/lineup_grid_view.dart`: `LineupGridView` — the shared formation-shape grid (rows of `PlayerDiamond` / placeholder diamonds, per `formationOrder`), taking an `onSlotTap` callback so the same widget can be interactive (Line-Up tab) or read-only-ish (main menu, where it only reacts to filled slots).
+- `lib/features/teams/screens/team_detail_screen.dart`: new **Line-Up** tab between Roster and Matches (tab count 3 → 4).
+- `lib/features/home/screens/home_screen.dart`: renders `LineupGridView` fed by `teamLineupProvider` instead of the original position-auto-grouped view (see the Main Menu section's note above).
