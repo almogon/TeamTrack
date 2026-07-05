@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../leagues/models/league.dart';
+import '../../leagues/providers/leagues_provider.dart';
 import '../../matches/models/match.dart';
 import '../../matches/providers/match_list_provider.dart';
 import '../../players/models/player_score.dart';
@@ -92,13 +94,20 @@ class TeamDetailScreen extends ConsumerWidget {
               );
             },
           ),
-          body: TabBarView(
+          body: Column(
             children: [
-              detail.players.isEmpty
-                  ? const _EmptyRoster()
-                  : _PlayerList(players: detail.players, teamId: teamId),
-              _MatchListTab(teamId: teamId, team: detail.team),
-              _LeaderboardTab(teamId: teamId),
+              _LeagueBanner(teamId: teamId),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    detail.players.isEmpty
+                        ? const _EmptyRoster()
+                        : _PlayerList(players: detail.players, teamId: teamId),
+                    _MatchListTab(teamId: teamId, team: detail.team),
+                    _LeaderboardTab(teamId: teamId),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -364,6 +373,58 @@ class _LeaderboardTile extends StatelessWidget {
           Text('pts', style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
+    );
+  }
+}
+
+// ── League banner ─────────────────────────────────────────────────────────────
+
+class _LeagueBanner extends ConsumerWidget {
+  const _LeagueBanner({required this.teamId});
+
+  final String teamId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final leagueAsync = ref.watch(teamLeagueProvider(teamId));
+
+    return leagueAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (League? league) {
+        if (league == null) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      context.push('/teams/$teamId/leagues/discover'),
+                  icon: const Icon(Icons.explore_outlined),
+                  label: const Text('Join a league'),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () =>
+                      context.push('/teams/$teamId/leagues/new'),
+                  child: const Text('Request a league'),
+                ),
+              ],
+            ),
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: ActionChip(
+              avatar: const Icon(Icons.emoji_events_outlined, size: 18),
+              label: Text('${league.name} · ${league.season}'),
+              onPressed: () => context.push('/leagues/${league.id}'),
+            ),
+          ),
+        );
+      },
     );
   }
 }

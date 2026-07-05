@@ -8,6 +8,10 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/update_password_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/leagues/screens/admin_league_validation_screen.dart';
+import '../../features/leagues/screens/create_league_screen.dart';
+import '../../features/leagues/screens/discover_leagues_screen.dart';
+import '../../features/leagues/screens/league_detail_screen.dart';
 import '../../features/matches/models/match.dart';
 import '../../features/matches/screens/create_match_screen.dart';
 import '../../features/matches/screens/live_match_screen.dart';
@@ -118,6 +122,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           matchId: state.pathParameters['matchId']!,
           teamId: state.pathParameters['teamId']!,
         ),
+      ),
+      GoRoute(
+        path: '/teams/:teamId/leagues/discover',
+        builder: (_, state) =>
+            DiscoverLeaguesScreen(teamId: state.pathParameters['teamId']!),
+      ),
+      GoRoute(
+        path: '/teams/:teamId/leagues/new',
+        builder: (_, _) => const CreateLeagueScreen(),
+      ),
+      GoRoute(
+        path: '/leagues/:leagueId',
+        builder: (_, state) =>
+            LeagueDetailScreen(leagueId: state.pathParameters['leagueId']!),
+      ),
+      GoRoute(
+        path: '/admin/leagues',
+        builder: (_, _) => const AdminLeagueValidationScreen(),
       ),
     ],
   );
