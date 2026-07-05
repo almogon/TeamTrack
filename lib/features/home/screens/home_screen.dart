@@ -1,12 +1,14 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/providers/profile_provider.dart';
+import '../../teams/models/lineup_formation.dart';
 import '../../teams/models/team.dart';
-import '../../teams/providers/team_provider.dart';
+import '../../teams/providers/lineup_provider.dart';
 import '../../teams/providers/teams_provider.dart';
-import '../widgets/formation_view.dart';
+import '../../teams/widgets/lineup_grid_view.dart';
 import '../widgets/main_menu_footer.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -69,19 +71,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Expanded(
                 child: teams.length == 1
                     ? _TeamFormationPage(team: teams.first)
-                    : PageView.builder(
-                        controller: _pageController,
-                        itemCount: teams.length,
-                        onPageChanged: (i) => setState(() => _currentIndex = i),
-                        itemBuilder: (_, i) =>
-                            _TeamFormationPage(team: teams[i]),
+                    : ScrollConfiguration(
+                        // Flutter's default ScrollBehavior only allows
+                        // touch/stylus/trackpad to drag-scroll — mouse is
+                        // excluded (it's normally reserved for text
+                        // selection), so a mouse "swipe" between teams did
+                        // nothing. Add mouse explicitly for this carousel.
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            ...ScrollConfiguration.of(context).dragDevices,
+                            PointerDeviceKind.mouse,
+                          },
+                        ),
+                        child: PageView.builder(
+                          controller: _pageController,
+                          itemCount: teams.length,
+                          onPageChanged: (i) =>
+                              setState(() => _currentIndex = i),
+                          itemBuilder: (_, i) =>
+                              _TeamFormationPage(team: teams[i]),
+                        ),
                       ),
               ),
               if (teams.length > 1)
                 _CarouselDots(count: teams.length, index: _currentIndex),
               MainMenuFooter(
                 onScores: () =>
-                    context.push('/teams/${current.id}', extra: 2),
+                    context.push('/teams/${current.id}', extra: 3),
                 onStartMatch: () =>
                     context.push('/teams/${current.id}/matches/new'),
                 onEditRoster: () => context.push('/teams/${current.id}'),
@@ -132,7 +148,7 @@ class _TeamFormationPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(teamDetailProvider(team.id));
+    final lineupAsync = ref.watch(teamLineupProvider(team.id));
     return Column(
       children: [
         const SizedBox(height: 8),
@@ -144,17 +160,45 @@ class _TeamFormationPage extends ConsumerWidget {
               ),
         ),
         Expanded(
-          child: detailAsync.when(
+          child: lineupAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, _) => Center(child: Text('Error: $err')),
-            data: (detail) => detail.players.isEmpty
-                ? const Center(child: Text('No players yet'))
-                : FormationView(
-                    team: team,
-                    players: detail.players,
-                    onPlayerTap: (player) => context
-                        .push('/teams/${team.id}/players/${player.id}'),
+            data: (lineup) {
+              // Same default-to-first-formation behavior as the Line-Up
+              // tab, so an unsaved team still shows a disposition (all
+              // placeholders) rather than nothing.
+              final formations =
+                  LineupFormation.forTeam(team.sportType, team.format);
+              final formation = formations.firstWhere(
+                (f) => f.key == lineup.formation,
+                orElse: () => formations.first,
+              );
+              return Column(
+                children: [
+                  if (lineup.formation != null)
+                    Text(
+                      lineup.formation!,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                    ),
+                  Expanded(
+                    child: LineupGridView(
+                      team: team,
+                      formation: formation,
+                      slots: lineup.slots,
+                      onSlotTap: (slotIndex) {
+                        final player = lineup.slots[slotIndex];
+                        if (player != null) {
+                          context
+                              .push('/teams/${team.id}/players/${player.id}');
+                        }
+                      },
+                    ),
                   ),
+                ],
+              );
+            },
           ),
         ),
       ],

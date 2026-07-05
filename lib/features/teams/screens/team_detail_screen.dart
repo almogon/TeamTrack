@@ -11,6 +11,7 @@ import '../models/player.dart';
 import '../models/team.dart';
 import '../providers/leaderboard_provider.dart';
 import '../providers/team_provider.dart';
+import '../widgets/lineup_tab.dart';
 
 class TeamDetailScreen extends ConsumerWidget {
   const TeamDetailScreen({
@@ -35,7 +36,7 @@ class TeamDetailScreen extends ConsumerWidget {
         body: Center(child: Text('Error: $err')),
       ),
       data: (detail) => DefaultTabController(
-        length: 3,
+        length: 4,
         initialIndex: initialTabIndex,
         child: Scaffold(
           appBar: AppBar(
@@ -57,7 +58,10 @@ class TeamDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const TabBar(
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
                     tabs: [
+                      Tab(text: 'Line-Up'),
                       Tab(text: 'Roster'),
                       Tab(text: 'Matches'),
                       Tab(text: 'Leaderboard'),
@@ -73,7 +77,7 @@ class TeamDetailScreen extends ConsumerWidget {
               return AnimatedBuilder(
                 animation: tab,
                 builder: (_, _) {
-                  if (tab.index == 0) {
+                  if (tab.index == 1) {
                     return FloatingActionButton.extended(
                       onPressed: () =>
                           context.push('/teams/$teamId/players/new'),
@@ -81,7 +85,7 @@ class TeamDetailScreen extends ConsumerWidget {
                       label: const Text('Add player'),
                     );
                   }
-                  if (tab.index == 1) {
+                  if (tab.index == 2) {
                     return FloatingActionButton.extended(
                       onPressed: () =>
                           context.push('/teams/$teamId/matches/new'),
@@ -100,6 +104,7 @@ class TeamDetailScreen extends ConsumerWidget {
               Expanded(
                 child: TabBarView(
                   children: [
+                    LineupTab(team: detail.team, players: detail.players),
                     detail.players.isEmpty
                         ? const _EmptyRoster()
                         : _PlayerList(players: detail.players, teamId: teamId),

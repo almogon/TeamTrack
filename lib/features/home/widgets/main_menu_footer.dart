@@ -43,7 +43,7 @@ class MainMenuFooter extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.groups_outlined),
-                tooltip: 'Edit roster',
+                tooltip: 'Team',
                 onPressed: onEditRoster,
               ),
             ],
