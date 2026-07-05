@@ -27,6 +27,10 @@ enum SportType {
         SportType.basketball => Position.basketball,
         SportType.volleyball => Position.volleyball,
       };
+
+  /// Positions ordered attack-line-first / defensive-line-last, for laying
+  /// out the main menu's formation view (football: FWD, MID, DEF, GK).
+  List<Position> get formationOrder => positions.reversed.toList();
 }
 
 class TeamFormat {

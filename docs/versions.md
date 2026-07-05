@@ -350,3 +350,29 @@
 - Export match report (PDF)
 - Coach notes per match
 - Public team profile page (web)
+
+
+## Main Menu implementation
+
+**Goal:** Replace the plain team-list Home screen with the visual "main menu" dashboard from `docs/design/main-menu/menu.png` / `menu.md`: a formation view of the current team's players, a carousel when the trainer owns multiple teams, and an oval footer with quick actions.
+
+### Design decisions
+- This is a frontend-only reshape of the existing Home screen — no new tables, no new providers beyond what `teamsProvider` / `teamDetailProvider` already expose.
+- **Empty state** (no teams): a single large circular button with a plus icon, centered — replaces the old icon+text+button empty state.
+- **One team**: show a formation view of that team's active players.
+- **Multiple teams**: the formation view becomes a swipeable `PageView` carousel (one page per team) with small page-indicator dots; footer actions apply to whichever team page is currently visible.
+- **Formation layout**: players are grouped by their `position` field and rendered as centered rows, ordered attack-line-first / defensive-line-last (the reverse of each sport's `Position` list in `sport_type.dart` — e.g. football becomes FWD → MID → DEF → GK, matching the mockup's 3-3-4 diamond pyramid). This is a simplification: it reflects *how many players are assigned to each position*, not a true tactical 4-3-3 grid with fixed x/y coordinates. Players without a position (or basketball/volleyball, which don't have a natural attack/defense axis) still render via the same reversed-list grouping for consistency, just without special meaning. Players are drawn as tappable diamonds (rotated squares) showing shirt number, opening the existing player detail screen on tap.
+- Diamonds use the app's theme primary color (not the mockup's placeholder orange) to stay consistent with the rest of the UI.
+- **Top bar**: keep the existing plan-badge chip alongside the settings icon (top right, per design) — dropping it would be a regression with no benefit.
+- **Oval footer** (per mockup, left → right):
+  - Left icon (list glyph) → **Scores**: opens Team Detail on the existing Leaderboard tab (`TeamDetailScreen` gains an `initialTabIndex` constructor param, passed via route `extra`).
+  - Middle icon (pitch glyph) → **Start a match**: opens the existing Create Match screen (`/teams/:teamId/matches/new`). No "is there already a live match" branching in this version — always goes to create.
+  - Right icon (players glyph) → **Edit positions and players**: opens Team Detail on the Roster tab (default tab 0). Position editing itself reuses the existing sport-aware position picker on the Add/Edit Player screen — no separate drag-and-drop formation editor in this version.
+
+### Frontend
+- `lib/features/teams/models/sport_type.dart`: add `SportType.formationOrder` (reversed `positions` list).
+- `lib/features/home/widgets/formation_view.dart`: `FormationView` (groups players into rows by `formationOrder`, unassigned players in a trailing row) + `PlayerDiamond` (rotated-square tappable token showing shirt number).
+- `lib/features/home/widgets/main_menu_footer.dart`: `MainMenuFooter`, the oval `StadiumBorder` bottom bar with the 3 actions above.
+- `lib/features/home/screens/home_screen.dart`: rewritten — empty/single/carousel states as described above, footer wired to the active team.
+- `lib/features/teams/screens/team_detail_screen.dart`: `TeamDetailScreen` gains `initialTabIndex` (default `0`); `DefaultTabController` uses it as `initialIndex`.
+- `lib/core/router/app_router.dart`: `/teams/:teamId` route reads `state.extra as int?` for the initial tab index.

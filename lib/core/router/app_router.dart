@@ -71,8 +71,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/teams/new', builder: (_, _) => const CreateTeamScreen()),
       GoRoute(
         path: '/teams/:teamId',
-        builder: (_, state) =>
-            TeamDetailScreen(teamId: state.pathParameters['teamId']!),
+        builder: (_, state) => TeamDetailScreen(
+          teamId: state.pathParameters['teamId']!,
+          initialTabIndex: state.extra as int? ?? 0,
+        ),
       ),
       GoRoute(
         path: '/teams/:teamId/players/new',
