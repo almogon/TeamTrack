@@ -93,6 +93,12 @@ class SettingsScreen extends ConsumerWidget {
           const Divider(),
           _SectionLabel('Account'),
           ListTile(
+            leading: const Icon(Icons.lock_outline),
+            title: const Text('Change password'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/change-password'),
+          ),
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Sign out'),
             onTap: _signOut,
