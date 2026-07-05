@@ -8,6 +8,10 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/update_password_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/leagues/screens/admin_league_validation_screen.dart';
+import '../../features/leagues/screens/create_league_screen.dart';
+import '../../features/leagues/screens/discover_leagues_screen.dart';
+import '../../features/leagues/screens/league_detail_screen.dart';
 import '../../features/matches/models/match.dart';
 import '../../features/matches/screens/create_match_screen.dart';
 import '../../features/matches/screens/live_match_screen.dart';
@@ -15,6 +19,7 @@ import '../../features/matches/screens/match_summary_screen.dart';
 import '../../features/subscriptions/screens/subscription_screen.dart';
 import '../../features/players/screens/add_player_screen.dart';
 import '../../features/players/screens/player_detail_screen.dart';
+import '../../features/settings/screens/change_password_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/teams/models/player.dart';
 import '../../features/teams/models/team.dart';
@@ -67,6 +72,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+      GoRoute(
+        path: '/settings/change-password',
+        builder: (_, _) => const ChangePasswordScreen(),
+      ),
       GoRoute(path: '/subscription', builder: (_, _) => const SubscriptionScreen()),
       GoRoute(path: '/teams/new', builder: (_, _) => const CreateTeamScreen()),
       GoRoute(
@@ -113,6 +122,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           matchId: state.pathParameters['matchId']!,
           teamId: state.pathParameters['teamId']!,
         ),
+      ),
+      GoRoute(
+        path: '/teams/:teamId/leagues/discover',
+        builder: (_, state) =>
+            DiscoverLeaguesScreen(teamId: state.pathParameters['teamId']!),
+      ),
+      GoRoute(
+        path: '/teams/:teamId/leagues/new',
+        builder: (_, _) => const CreateLeagueScreen(),
+      ),
+      GoRoute(
+        path: '/leagues/:leagueId',
+        builder: (_, state) =>
+            LeagueDetailScreen(leagueId: state.pathParameters['leagueId']!),
+      ),
+      GoRoute(
+        path: '/admin/leagues',
+        builder: (_, _) => const AdminLeagueValidationScreen(),
       ),
     ],
   );

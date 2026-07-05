@@ -265,8 +265,11 @@
 - Any user can request to create a league, but it must be validated by an `admin` or `manager` before it becomes active
 - League season always runs **1 July → 30 June** (fixed calendar, not configurable in V6)
 - A team can belong to only one league at a time
-- When a league season ends, the system auto-creates the next season's edition in `default_leagues` so the league persists without manual recreation
+- When a league season ends, the system auto-creates the next season's edition in `default_leagues` so the league persists without manual recreation, but the league stay empty without any team relation.
+- a Team should have the option to join a league, only if is not already linked with an other one.
+- If one team join a league, this team can not leave it, so before join a league, the user should get a notification to confirm wants to join.
 - Teams discover leagues by city or zip code
+
 
 ### Backend
 **New migration: `v6_leagues`**
@@ -312,9 +315,17 @@
 - **Admin validation flow** (admin/manager role only): pending league list → approve / reject
 - Update **team detail screen**: show current league badge if enrolled
 
+### Implementation notes
+- `league_teams_delete` RLS is **admin/manager only** — there is no owner self-leave, per the "cannot leave" design decision above. The Discover Leagues screen shows a confirmation dialog ("Once your team joins ... it cannot leave") before inserting the `league_teams` row.
+- Rejecting a pending league request is a **delete** (no `rejected` status exists in the schema); approving sets `status = 'active'` + `validated_by`.
+- **Standings** are computed by `league_standings(p_league_id)`, a `SECURITY DEFINER` SQL function, not a plain view — `matches` RLS is owner-only, so a caller can't see another team's match rows directly; the function aggregates win/draw/loss/points server-side and returns only those columns, without exposing raw match data cross-team. Each team's record is built from that team's own logged matches (no cross-team dedup, consistent with `player_season_scores`).
+- `rollover_leagues()` is **not exposed to the app** (no grant to `authenticated`) — it's meant to be invoked via the SQL editor, a scheduled Edge Function, or `pg_cron`; none of those triggers are wired up yet, so rollover is a manual/operational step for now. `default_leagues` is likewise DB-only (admin/manager RLS), with no management UI in this version.
+- Admin entry point: Settings → "Admin" section (visible only when `profile.role` is `admin`/`manager`) → `/admin/leagues`.
+- Team detail screen: shows "Join a league" + "Request a league" buttons when the team has none, or a league chip (→ League Detail) when it does.
+
 ---
 
-## Version 7 — Admin & manager analytics platform
+## Others: Admin & manager analytics platform
 
 **Goal:** A web platform (separate from the trainer app) accessible only to `admin` and `manager` users, offering cross-team and cross-league analytics.
 

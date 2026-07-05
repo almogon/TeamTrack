@@ -27,6 +27,8 @@ class SettingsScreen extends ConsumerWidget {
     final teamCount = teamsAsync.value?.length ?? 0;
     final matchLimit = profileAsync.value?.matchLimit;
     final atTeamLimit = teamLimit != null && teamCount >= teamLimit;
+    final role = profileAsync.value?.role;
+    final isAdminOrManager = role == 'admin' || role == 'manager';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -90,8 +92,24 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/subscription'),
           ),
+          if (isAdminOrManager) ...[
+            const Divider(),
+            _SectionLabel('Admin'),
+            ListTile(
+              leading: const Icon(Icons.rule_folder_outlined),
+              title: const Text('League requests'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/admin/leagues'),
+            ),
+          ],
           const Divider(),
           _SectionLabel('Account'),
+          ListTile(
+            leading: const Icon(Icons.lock_outline),
+            title: const Text('Change password'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/change-password'),
+          ),
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Sign out'),
