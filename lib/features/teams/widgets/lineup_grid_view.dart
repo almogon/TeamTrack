@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../shared/widgets/player_diamond.dart';
 import '../models/lineup_formation.dart';
 import '../models/player.dart';
+import '../models/sport_type.dart';
 import '../models/team.dart';
+import 'football_pitch_background.dart';
 
 /// Renders a formation's slots as rows of diamonds (filled or placeholder),
 /// grouped and ordered attack-line-first / defensive-line-last (see
@@ -40,7 +42,7 @@ class LineupGridView extends StatelessWidget {
         if (byRole[position.code]?.isNotEmpty ?? false) byRole[position.code]!,
     ];
 
-    return Padding(
+    final grid = Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -65,6 +67,19 @@ class LineupGridView extends StatelessWidget {
           ],
         ],
       ),
+    );
+
+    // Football only for now — the pitch SVG is stretched with BoxFit.fill
+    // to exactly match the grid's own bounding box (Positioned.fill inside
+    // this Stack), so the goal line always lines up under the GK row and
+    // the halfway line always sits above the forward line, regardless of
+    // how many rows the formation has.
+    if (team.sportType != SportType.football) return grid;
+    return Stack(
+      children: [
+        const Positioned.fill(child: FootballPitchBackground()),
+        grid,
+      ],
     );
   }
 }
