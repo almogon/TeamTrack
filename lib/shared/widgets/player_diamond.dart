@@ -37,8 +37,8 @@ class PlayerDiamond extends StatelessWidget {
           Transform.rotate(
             angle: math.pi / 4,
             child: Container(
-              width: 52,
-              height: 52,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: cs.primaryContainer,
                 border: Border.all(color: cs.primary, width: 2),

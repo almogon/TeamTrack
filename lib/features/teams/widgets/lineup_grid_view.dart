@@ -39,9 +39,22 @@ class LineupGridView extends StatelessWidget {
     for (var i = 0; i < formation.slots.length; i++) {
       byRole.putIfAbsent(formation.slots[i], () => []).add(i);
     }
+    // Football always reserves every role row (even when this formation has
+    // no slots for it, e.g. 2-2/3-3 have no MID line) so the grid — and the
+    // pitch behind it — stays the same size across every formation,
+    // instead of shrinking/growing and dragging the pitch's proportions
+    // along with it. A missing role just renders as an empty strip of
+    // grass in its usual spot. Basketball/volleyball only ever have a
+    // single formation each (nothing to switch between, so no resizing to
+    // guard against) and, unlike football, don't use every role in
+    // [SportType.positions] (e.g. volleyball's Libero isn't in the
+    // starting rotation) — reserving all of them would just add blank rows.
     final rows = <List<int>>[
       for (final position in team.sportType.formationOrder)
-        if (byRole[position.code]?.isNotEmpty ?? false) byRole[position.code]!,
+        if (team.sportType == SportType.football)
+          byRole[position.code] ?? const <int>[]
+        else if (byRole[position.code]?.isNotEmpty ?? false)
+          byRole[position.code]!,
     ];
 
     final grid = Padding(
@@ -50,22 +63,27 @@ class LineupGridView extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final row in rows) ...[
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 24,
-              runSpacing: 24,
-              children: [
-                for (final slotIndex in row)
-                  _SlotDiamond(
-                    player: slots[slotIndex],
-                    onTap: () => onSlotTap(slotIndex),
-                    onDrop: onSlotDrop == null
-                        ? null
-                        : (player) => onSlotDrop!(slotIndex, player),
-                  ),
-              ],
+            SizedBox(
+              height: 76,
+              child: Center(
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 20,
+                  runSpacing: 20,
+                  children: [
+                    for (final slotIndex in row)
+                      _SlotDiamond(
+                        player: slots[slotIndex],
+                        onTap: () => onSlotTap(slotIndex),
+                        onDrop: onSlotDrop == null
+                            ? null
+                            : (player) => onSlotDrop!(slotIndex, player),
+                      ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
           ],
         ],
       ),
@@ -80,16 +98,20 @@ class LineupGridView extends StatelessWidget {
     // made the pitch tiny on wide/web layouts and let the widest row's
     // diamonds span edge-to-edge of the box, spilling past the inset
     // touchlines instead of sitting inside them. Width is also capped at
-    // 420 — on a wide desktop/web viewport, 90% of the available width can
+    // 480 — on a wide desktop/web viewport, 90% of the available width can
     // be much wider than the grid's content is tall, and BoxFit.fill would
     // stretch the pitch into a squashed landscape shape; capping keeps it
-    // at a sane, roughly portrait size instead.
+    // at a sane, roughly portrait size instead. The cap is higher (and the
+    // diamonds/spacing above are smaller) than a first pass at this, so the
+    // narrower main-menu carousel card and the full-width Line-Up tab both
+    // comfortably fit a 5-wide row without the grid resizing itself
+    // differently between the two places.
     if (team.sportType != SportType.football) return grid;
     return LayoutBuilder(
       builder: (context, constraints) {
         return Center(
           child: SizedBox(
-            width: math.min(constraints.maxWidth * 0.9, 420),
+            width: math.min(constraints.maxWidth * 0.9, 480),
             child: Stack(
               // Stack defaults non-positioned children to top-left, which
               // left the grid hugging the left edge once the pitch box
@@ -153,8 +175,8 @@ class _SlotDiamond extends StatelessWidget {
       child: Transform.rotate(
         angle: 0.7853981633974483, // pi / 4
         child: Container(
-          width: 52,
-          height: 52,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             border: Border.all(color: cs.outlineVariant, width: 2),
             borderRadius: BorderRadius.circular(8),

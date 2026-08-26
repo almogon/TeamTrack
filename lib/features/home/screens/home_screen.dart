@@ -178,13 +178,18 @@ class _TeamFormationPage extends ConsumerWidget {
               );
               return Column(
                 children: [
-                  if (lineup.formation != null)
-                    Text(
-                      lineup.formation!,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                    ),
+                  // Always show the resolved formation name — including the
+                  // default used for a team that's never saved a line-up —
+                  // not just when one is persisted. Otherwise this row's
+                  // presence/absence differs per card, which shifted the
+                  // pitch up or down and made cards visibly misalign while
+                  // scrolling the carousel.
+                  Text(
+                    formation.key,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                  ),
                   Expanded(
                     child: LineupGridView(
                       team: team,
