@@ -9,7 +9,7 @@
   <rect x="8" y="10" width="284" height="400" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
 
   <!-- Center circle (bulging down from the halfway line) + center spot -->
-  <path d="M 85 10 A 65 65 0 0 1 215 10" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
+  <path d="M 85 10 A 65 65 0 0 0 215 10" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
   <circle cx="150" cy="10" r="3" fill="#FFFFFF"/>
 
   <!-- Futsal goal area: quarter-circle arcs from each post joined by a

@@ -91,15 +91,6 @@ class LineupFormation {
       ],
     ),
     LineupFormation(
-      key: '4-2-3-1',
-      slots: [
-        'GK',
-        'DEF', 'DEF', 'DEF', 'DEF',
-        'MID', 'MID', 'MID', 'MID', 'MID',
-        'FWD',
-      ],
-    ),
-    LineupFormation(
       key: '3-5-2',
       slots: [
         'GK',
@@ -120,6 +111,10 @@ class LineupFormation {
   ];
 
   static const football7 = [
+    LineupFormation(
+      key: '3-3',
+      slots: ['GK', 'DEF', 'DEF', 'DEF', 'FWD', 'FWD', 'FWD'],
+    ),
     LineupFormation(
       key: '3-2-1',
       slots: ['GK', 'DEF', 'DEF', 'DEF', 'MID', 'MID', 'FWD'],

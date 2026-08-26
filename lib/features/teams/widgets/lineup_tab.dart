@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../shared/widgets/player_diamond.dart';
+import '../../leagues/models/league.dart';
+import '../../leagues/providers/leagues_provider.dart';
 import '../models/lineup_formation.dart';
 import '../models/player.dart';
 import '../models/sport_type.dart';
@@ -13,6 +16,10 @@ import '../providers/teams_provider.dart';
 import 'lineup_grid_view.dart';
 
 const _clearSlot = Object();
+
+/// Below this width the Line-Up tab uses the single-column phone layout;
+/// at or above it, the two-column tablet/desktop layout.
+const _tabletBreakpoint = 700.0;
 
 /// Line-Up tab: a formation combobox plus an interactive slot grid ([
 /// LineupGridView] — the same grid the main menu renders read-only) and a
@@ -154,72 +161,314 @@ class _LineupTabState extends ConsumerState<LineupTab> {
         final bench =
             widget.players.where((p) => !assignedIds.contains(p.id)).toList();
 
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: DropdownButtonFormField<String>(
-                initialValue: _formationKey,
-                decoration: const InputDecoration(
-                  labelText: 'Formation',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-                items: [
-                  for (final formation in _formations)
-                    DropdownMenuItem(
-                      value: formation.key,
-                      child: Text(formation.key),
-                    ),
-                ],
-                onChanged: _onFormationChanged,
+        final formationDropdown = DropdownButtonFormField<String>(
+          initialValue: _formationKey,
+          decoration: const InputDecoration(
+            labelText: 'Formation',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+          items: [
+            for (final formation in _formations)
+              DropdownMenuItem(
+                value: formation.key,
+                child: Text(formation.key),
               ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    LineupGridView(
-                      team: widget.team,
-                      formation: _currentFormation,
-                      slots: _slots,
-                      onSlotTap: _openPicker,
-                      onSlotDrop: (slotIndex, player) =>
-                          _assignPlayerToSlot(slotIndex, player.id),
-                    ),
-                    const Divider(height: 32, indent: 16, endIndent: 16),
-                    _BenchList(players: bench),
-                  ],
-                ),
-              ),
-            ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: FilledButton(
-                  onPressed: (_dirty && !_saving) ? _save : null,
-                  child: _saving
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Save'),
-                ),
-              ),
-            ),
           ],
+          onChanged: _onFormationChanged,
+        );
+
+        final pitch = LineupGridView(
+          team: widget.team,
+          formation: _currentFormation,
+          slots: _slots,
+          onSlotTap: _openPicker,
+          onSlotDrop: (slotIndex, player) =>
+              _assignPlayerToSlot(slotIndex, player.id),
+        );
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= _tabletBreakpoint;
+            return Column(
+              children: [
+                Expanded(
+                  child: isWide
+                      ? _WideLayout(
+                          teamId: widget.team.id,
+                          formationDropdown: formationDropdown,
+                          pitch: pitch,
+                          bench: bench,
+                        )
+                      : _CompactLayout(
+                          teamId: widget.team.id,
+                          formationDropdown: formationDropdown,
+                          pitch: pitch,
+                          bench: bench,
+                        ),
+                ),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    child: FilledButton(
+                      onPressed: (_dirty && !_saving) ? _save : null,
+                      child: _saving
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Save'),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 }
 
-class _BenchList extends StatelessWidget {
-  const _BenchList({required this.players});
+// ── Responsive layouts ──────────────────────────────────────────────────────
+
+/// Tablet/desktop: a league-actions row, then a bench panel (left, narrower,
+/// vertically scrollable, ellipsized names) beside the formation + pitch
+/// (right, wider — the pitch needs the room to stay readable).
+class _WideLayout extends StatelessWidget {
+  const _WideLayout({
+    required this.teamId,
+    required this.formationDropdown,
+    required this.pitch,
+    required this.bench,
+  });
+
+  final String teamId;
+  final Widget formationDropdown;
+  final Widget pitch;
+  final List<Player> bench;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: _LeagueActions(teamId: teamId),
+        ),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+                  child: _BenchPanel(players: bench),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
+                  child: Column(
+                    children: [
+                      formationDropdown,
+                      const SizedBox(height: 16),
+                      pitch,
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Phone: formation dropdown with a trailing icon that opens league actions
+/// in a sheet (no room for them inline), pitch above a horizontally
+/// scrolling, number-only bench.
+class _CompactLayout extends StatelessWidget {
+  const _CompactLayout({
+    required this.teamId,
+    required this.formationDropdown,
+    required this.pitch,
+    required this.bench,
+  });
+
+  final String teamId;
+  final Widget formationDropdown;
+  final Widget pitch;
+  final List<Player> bench;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(
+            children: [
+              Expanded(child: formationDropdown),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.more_vert),
+                tooltip: 'League',
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  builder: (_) => SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: _LeagueActions(teamId: teamId),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                pitch,
+                const Divider(height: 32, indent: 16, endIndent: 16),
+                _BenchHorizontalList(players: bench),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Join/request-league actions when the team has no league yet, or a chip
+/// linking to its current league. Shared between the wide layout's inline
+/// row and the compact layout's bottom sheet.
+class _LeagueActions extends ConsumerWidget {
+  const _LeagueActions({required this.teamId});
+
+  final String teamId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final leagueAsync = ref.watch(teamLeagueProvider(teamId));
+
+    return leagueAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (League? league) {
+        if (league == null) {
+          return Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () =>
+                    context.push('/teams/$teamId/leagues/discover'),
+                icon: const Icon(Icons.explore_outlined),
+                label: const Text('Join a league'),
+              ),
+              TextButton(
+                onPressed: () => context.push('/teams/$teamId/leagues/new'),
+                child: const Text('Request a league'),
+              ),
+            ],
+          );
+        }
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: ActionChip(
+            avatar: const Icon(Icons.emoji_events_outlined, size: 18),
+            label: Text('${league.name} · ${league.season}'),
+            onPressed: () => context.push('/leagues/${league.id}'),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Wide-layout bench: a vertically scrollable list (the panel itself has a
+/// fixed, narrower width from its parent `Expanded`), names ellipsized so a
+/// long name never forces the panel wider.
+class _BenchPanel extends StatelessWidget {
+  const _BenchPanel({required this.players});
+
+  final List<Player> players;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Bench (${players.length})',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: players.isEmpty
+              ? const Text('Everyone is on the pitch')
+              : ListView.builder(
+                  itemCount: players.length,
+                  itemBuilder: (context, i) {
+                    final player = players[i];
+                    return Draggable<Player>(
+                      data: player,
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: PlayerDiamond(player: player, onTap: () {}),
+                      ),
+                      childWhenDragging: Opacity(
+                        opacity: 0.4,
+                        child: _BenchTile(player: player),
+                      ),
+                      child: _BenchTile(player: player),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BenchTile extends StatelessWidget {
+  const _BenchTile({required this.player});
+
+  final Player player;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        child: Text(player.number?.toString() ?? '?'),
+      ),
+      title: Text(player.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: player.position != null
+          ? Text(player.position!, maxLines: 1, overflow: TextOverflow.ellipsis)
+          : null,
+    );
+  }
+}
+
+/// Compact-layout bench: a horizontal scroll of number-only avatars —
+/// there's no room for names next to the pitch on a phone screen.
+class _BenchHorizontalList extends StatelessWidget {
+  const _BenchHorizontalList({required this.players});
 
   final List<Player> players;
 
@@ -240,39 +489,53 @@ class _BenchList extends StatelessWidget {
           if (players.isEmpty)
             const Text('Everyone is on the pitch')
           else
-            for (final player in players)
-              Draggable<Player>(
-                data: player,
-                feedback: Material(
-                  color: Colors.transparent,
-                  child: PlayerDiamond(player: player, onTap: () {}),
-                ),
-                childWhenDragging: Opacity(
-                  opacity: 0.4,
-                  child: _BenchTile(player: player),
-                ),
-                child: _BenchTile(player: player),
+            SizedBox(
+              height: 56,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: players.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (context, i) {
+                  final player = players[i];
+                  return Draggable<Player>(
+                    data: player,
+                    feedback: Material(
+                      color: Colors.transparent,
+                      child: PlayerDiamond(player: player, onTap: () {}),
+                    ),
+                    childWhenDragging: Opacity(
+                      opacity: 0.4,
+                      child: _BenchNumberAvatar(player: player),
+                    ),
+                    child: _BenchNumberAvatar(player: player),
+                  );
+                },
               ),
+            ),
         ],
       ),
     );
   }
 }
 
-class _BenchTile extends StatelessWidget {
-  const _BenchTile({required this.player});
+class _BenchNumberAvatar extends StatelessWidget {
+  const _BenchNumberAvatar({required this.player});
 
   final Player player;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        child: Text(player.number?.toString() ?? '?'),
+    final cs = Theme.of(context).colorScheme;
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: cs.secondaryContainer,
+      child: Text(
+        player.number?.toString() ?? '?',
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: cs.onSecondaryContainer,
+        ),
       ),
-      title: Text(player.name),
-      subtitle: player.position != null ? Text(player.position!) : null,
     );
   }
 }

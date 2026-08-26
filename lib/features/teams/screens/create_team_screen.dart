@@ -157,7 +157,10 @@ class _SportStep extends StatelessWidget {
         Text('Choose a sport',
             style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 24),
-        for (final sport in SportType.values) ...[
+        // Basketball and volleyball are hidden until their pitch SVGs and
+        // grid layout are implemented — football is the only sport with a
+        // finished Line-Up experience.
+        for (final sport in [SportType.football]) ...[
           _SportCard(sport: sport, onTap: () => onPick(sport)),
           const SizedBox(height: 12),
         ],

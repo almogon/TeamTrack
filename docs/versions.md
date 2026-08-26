@@ -436,22 +436,32 @@
 - `lib/features/home/screens/home_screen.dart`: renders `LineupGridView` fed by `teamLineupProvider` instead of the original position-auto-grouped view (see the Main Menu section's note above).
 
 #### Improvements and bugs 1
-Remove line-up 4-2-3-1
-soccer field change when the layers of the line-up are different. Let the size to cover the biggest line-up and adapt the position of the players correctly into that.
-Soccer field has the half cycle of the top inverse in both football svgs
-The footbal goal in svg football 7/11 
-add line-up 3-3 in footbal 7 as first and default option
-Hide options to create basketball and volleyball from the UI until we do the svg and other options
-In the line-up management view, i want split the main view into two layers. for tablet or bigger screans
+1. Remove line-up 4-2-3-1
+2. soccer field change when the layers of the line-up are different. Let the size to cover the biggest line-up and adapt the position of the players correctly into that.
+3. Soccer field has the half cycle of the top inverse in both football svgs
+4. add line-up 3-3 in footbal 7 as first and default option
+5. Hide options to create basketball and volleyball from the UI until we do the svg and other options
+6. In the line-up management view, i want split the main view into two layers. for tablet or bigger screans
 - First row with join a league and request a league we let.
 - Then we have container left and container rigth:
 -- Rigth: Display the formation and the soccer field
 -- Left: Display the bench. This part should have the scroll, and the names should be ellipsed if they dont fit the size. 
 - Containers can not be the same size, because football field should be big enough to see it correct.
-For telephones screans:
-first row:
+- For telephones screans:
+-- first row:
 formation combobox, and in the rigth align center position, an icon to open more settings (join a league, request a league)
-The bench, instead of display number/playername, display only the number, and make an horizontal scroll only of this section.
+-- The bench, instead of display number/playername, display only the number, and make an horizontal scroll only of this section.
+7. Because in the main view, the svg has not the same width as in the settings, the line-up change and readapt to the size. We need make bigger the width or reduce a little the size of the icons per player. Or both.
 
 #### Improvements and bugs 2
+Horizontal scroll on telpehone while editing the teams is difficult to manage due to the size of the players and the posibility of drag and drop, display a visual scroll so the user can click good.
+For players with only name and not number, the icon is a question mark. When there is no number, use the first two characters of the name to display. The first character as capital letter.
+The formation combobox is not exactly align with the soccer field, has few pixels extra on the left part.
+Rosters should have a maximum of 21 players, after that, user can not add more players.
+Remove players should be only a logic remove (archive player), if player participate in a match or has scores, although is not in the team, the data should be available when users open leaderboard or matches, review if this is like this. 
+Create a new tab in the team management view, with label Settings: Here add the options join a league, request a league, remove team.
+Remove the options join a league and request a league from the Line-Up tab.
+Remove a team is only archive: The team is not visible anymore for the user, but we keep all the data.
+
+#### Other bugs
 After finish the match, I can see correct the summary of the match and the points. However, when I navigate back, because is the only option to go away of this view, and come back until the Matches list, that match has the icon Start instead of the summary, and also the points are not added into Leaderboard statistics. So there is something missing, review and fix.
