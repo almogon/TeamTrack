@@ -15,6 +15,7 @@ class TeamsNotifier extends AsyncNotifier<List<Team>> {
         .from('teams')
         .select()
         .eq('owner_id', user.id)
+        .eq('archived', false)
         .order('name');
     return (data as List<dynamic>)
         .map((e) => Team.fromJson(e as Map<String, dynamic>))
@@ -40,6 +41,17 @@ class TeamsNotifier extends AsyncNotifier<List<Team>> {
       'max_players': maxPlayers,
       if (season != null && season.trim().isNotEmpty) 'season': season.trim(),
     });
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(_fetch);
+  }
+
+  /// Soft-deletes a team: it stops appearing anywhere in the app, but its
+  /// players/matches/stats are kept (a trainer's history isn't discarded
+  /// just because they stopped tracking a team).
+  Future<void> archiveTeam(String teamId) async {
+    await Supabase.instance.client
+        .from('teams')
+        .update({'archived': true}).eq('id', teamId);
     state = const AsyncLoading();
     state = await AsyncValue.guard(_fetch);
   }

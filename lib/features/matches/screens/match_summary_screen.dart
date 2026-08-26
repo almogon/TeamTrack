@@ -22,26 +22,34 @@ class MatchSummaryScreen extends ConsumerWidget {
     final matchAsync = ref.watch(matchProvider(matchId));
     final teamAsync = ref.watch(teamDetailProvider(teamId));
     final eventsAsync = ref.watch(matchEventsProvider(matchId));
+    // Unfiltered (includes archived players) — a match summary is
+    // historical, so a player removed from the team since should still
+    // show their real name and stats here instead of "Unknown".
+    final allPlayersAsync = ref.watch(teamAllPlayersProvider(teamId));
 
-    final anyLoading =
-        matchAsync.isLoading || teamAsync.isLoading || eventsAsync.isLoading;
+    final anyLoading = matchAsync.isLoading ||
+        teamAsync.isLoading ||
+        eventsAsync.isLoading ||
+        allPlayersAsync.isLoading;
     if (anyLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final anyError =
-        matchAsync.hasError || teamAsync.hasError || eventsAsync.hasError;
+    final anyError = matchAsync.hasError ||
+        teamAsync.hasError ||
+        eventsAsync.hasError ||
+        allPlayersAsync.hasError;
     if (anyError) {
       return Scaffold(
         appBar: AppBar(title: const Text('Match Summary')),
         body: Center(
-            child: Text(
-                '${matchAsync.error ?? teamAsync.error ?? eventsAsync.error}')),
+            child: Text('${matchAsync.error ?? teamAsync.error ?? eventsAsync.error ?? allPlayersAsync.error}')),
       );
     }
 
     final match = matchAsync.value!;
     final teamDetail = teamAsync.value!;
     final events = eventsAsync.value!;
+    final allPlayers = allPlayersAsync.value!;
 
     return ref.watch(statRulesProvider(teamDetail.team.sport)).when(
           loading: () =>
@@ -71,7 +79,7 @@ class MatchSummaryScreen extends ConsumerWidget {
               ..sort((a, b) => b.value.points.compareTo(a.value.points));
 
             final playerById = {
-              for (final p in teamDetail.players) p.id: p,
+              for (final p in allPlayers) p.id: p,
             };
 
             final d = match.matchDate;

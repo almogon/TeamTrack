@@ -23,6 +23,15 @@ class Player {
 
   String get displayName => alias?.isNotEmpty == true ? alias! : name;
 
+  /// First two characters of [displayName] (first one capitalized), used
+  /// as an avatar fallback wherever there's no shirt number to show.
+  String get initials {
+    final n = displayName.trim();
+    if (n.isEmpty) return '?';
+    final two = n.length >= 2 ? n.substring(0, 2) : n;
+    return two[0].toUpperCase() + two.substring(1);
+  }
+
   factory Player.fromJson(Map<String, dynamic> json) => Player(
         id: json['id'] as String,
         teamId: json['team_id'] as String,
