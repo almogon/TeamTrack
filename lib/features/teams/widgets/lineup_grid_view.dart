@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/player_diamond.dart';
@@ -50,8 +52,8 @@ class LineupGridView extends StatelessWidget {
           for (final row in rows) ...[
             Wrap(
               alignment: WrapAlignment.center,
-              spacing: 32,
-              runSpacing: 32,
+              spacing: 24,
+              runSpacing: 24,
               children: [
                 for (final slotIndex in row)
                   _SlotDiamond(
@@ -63,23 +65,48 @@ class LineupGridView extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
           ],
         ],
       ),
     );
 
     // Football only for now — the pitch SVG is stretched with BoxFit.fill
-    // to exactly match the grid's own bounding box (Positioned.fill inside
-    // this Stack), so the goal line always lines up under the GK row and
-    // the halfway line always sits above the forward line, regardless of
-    // how many rows the formation has.
+    // to exactly match the Stack's own size, so the goal line always lines
+    // up under the GK row and the halfway line always sits above the
+    // forward line, regardless of how many rows the formation has. The
+    // Stack is pinned to 90% of the available width via LayoutBuilder
+    // instead of shrink-wrapping to the grid's content: shrink-wrapping
+    // made the pitch tiny on wide/web layouts and let the widest row's
+    // diamonds span edge-to-edge of the box, spilling past the inset
+    // touchlines instead of sitting inside them. Width is also capped at
+    // 420 — on a wide desktop/web viewport, 90% of the available width can
+    // be much wider than the grid's content is tall, and BoxFit.fill would
+    // stretch the pitch into a squashed landscape shape; capping keeps it
+    // at a sane, roughly portrait size instead.
     if (team.sportType != SportType.football) return grid;
-    return Stack(
-      children: [
-        const Positioned.fill(child: FootballPitchBackground()),
-        grid,
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Center(
+          child: SizedBox(
+            width: math.min(constraints.maxWidth * 0.9, 420),
+            child: Stack(
+              // Stack defaults non-positioned children to top-left, which
+              // left the grid hugging the left edge once the pitch box
+              // grew wider than the grid's own content — center it.
+              alignment: Alignment.center,
+              children: [
+                Positioned.fill(
+                  child: FootballPitchBackground(
+                    isFutsal: team.format == TeamFormat.football5.size,
+                  ),
+                ),
+                grid,
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

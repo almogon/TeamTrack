@@ -434,3 +434,24 @@
 - `lib/features/teams/widgets/lineup_grid_view.dart`: `LineupGridView` — the shared formation-shape grid (rows of `PlayerDiamond` / placeholder diamonds, per `formationOrder`), taking an `onSlotTap` callback so the same widget can be interactive (Line-Up tab) or read-only-ish (main menu, where it only reacts to filled slots).
 - `lib/features/teams/screens/team_detail_screen.dart`: new **Line-Up** tab between Roster and Matches (tab count 3 → 4).
 - `lib/features/home/screens/home_screen.dart`: renders `LineupGridView` fed by `teamLineupProvider` instead of the original position-auto-grouped view (see the Main Menu section's note above).
+
+#### Improvements and bugs 1
+Remove line-up 4-2-3-1
+soccer field change when the layers of the line-up are different. Let the size to cover the biggest line-up and adapt the position of the players correctly into that.
+Soccer field has the half cycle of the top inverse in both football svgs
+The footbal goal in svg football 7/11 
+add line-up 3-3 in footbal 7 as first and default option
+Hide options to create basketball and volleyball from the UI until we do the svg and other options
+In the line-up management view, i want split the main view into two layers. for tablet or bigger screans
+- First row with join a league and request a league we let.
+- Then we have container left and container rigth:
+-- Rigth: Display the formation and the soccer field
+-- Left: Display the bench. This part should have the scroll, and the names should be ellipsed if they dont fit the size. 
+- Containers can not be the same size, because football field should be big enough to see it correct.
+For telephones screans:
+first row:
+formation combobox, and in the rigth align center position, an icon to open more settings (join a league, request a league)
+The bench, instead of display number/playername, display only the number, and make an horizontal scroll only of this section.
+
+#### Improvements and bugs 2
+After finish the match, I can see correct the summary of the match and the points. However, when I navigate back, because is the only option to go away of this view, and come back until the Matches list, that match has the icon Start instead of the summary, and also the points are not added into Leaderboard statistics. So there is something missing, review and fix.

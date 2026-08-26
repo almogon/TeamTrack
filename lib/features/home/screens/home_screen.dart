@@ -88,8 +88,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           itemCount: teams.length,
                           onPageChanged: (i) =>
                               setState(() => _currentIndex = i),
-                          itemBuilder: (_, i) =>
-                              _TeamFormationPage(team: teams[i]),
+                          itemBuilder: (_, i) => Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 12),
+                            child: _TeamFormationPage(team: teams[i]),
+                          ),
                         ),
                       ),
               ),

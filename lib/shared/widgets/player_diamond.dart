@@ -66,7 +66,13 @@ class PlayerDiamond extends StatelessWidget {
               alias,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    shadows: const [
+                      Shadow(color: Colors.black54, blurRadius: 3),
+                    ],
+                  ),
             ),
           ],
         ],
