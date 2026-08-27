@@ -26,23 +26,26 @@ class MatchSummaryScreen extends ConsumerWidget {
     // historical, so a player removed from the team since should still
     // show their real name and stats here instead of "Unknown".
     final allPlayersAsync = ref.watch(teamAllPlayersProvider(teamId));
+    final substitutionsAsync = ref.watch(matchSubstitutionsProvider(matchId));
 
     final anyLoading = matchAsync.isLoading ||
         teamAsync.isLoading ||
         eventsAsync.isLoading ||
-        allPlayersAsync.isLoading;
+        allPlayersAsync.isLoading ||
+        substitutionsAsync.isLoading;
     if (anyLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final anyError = matchAsync.hasError ||
         teamAsync.hasError ||
         eventsAsync.hasError ||
-        allPlayersAsync.hasError;
+        allPlayersAsync.hasError ||
+        substitutionsAsync.hasError;
     if (anyError) {
       return Scaffold(
         appBar: AppBar(title: const Text('Match Summary')),
         body: Center(
-            child: Text('${matchAsync.error ?? teamAsync.error ?? eventsAsync.error ?? allPlayersAsync.error}')),
+            child: Text('${matchAsync.error ?? teamAsync.error ?? eventsAsync.error ?? allPlayersAsync.error ?? substitutionsAsync.error}')),
       );
     }
 
@@ -50,6 +53,16 @@ class MatchSummaryScreen extends ConsumerWidget {
     final teamDetail = teamAsync.value!;
     final events = eventsAsync.value!;
     final allPlayers = allPlayersAsync.value!;
+    final substitutions = substitutionsAsync.value!;
+
+    // Total minutes played per player, summed across every on-pitch stint
+    // (a starter has one; anyone subbed on/off mid-match can have more).
+    final minutesByPlayer = <String, int>{};
+    for (final sub in substitutions) {
+      final minutes = (sub.minuteOut ?? sub.minuteIn) - sub.minuteIn;
+      if (minutes <= 0) continue;
+      minutesByPlayer[sub.playerId] = (minutesByPlayer[sub.playerId] ?? 0) + minutes;
+    }
 
     return ref.watch(statRulesProvider(teamDetail.team.sport)).when(
           loading: () =>
@@ -191,7 +204,8 @@ class MatchSummaryScreen extends ConsumerWidget {
                             ),
                           ),
                           title: Text(name),
-                          subtitle: Text(_statSummary(sport, counts)),
+                          subtitle: Text(
+                              _statSummary(sport, counts, minutesByPlayer[entry.key])),
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -234,10 +248,11 @@ class MatchSummaryScreen extends ConsumerWidget {
     return total;
   }
 
-  String _statSummary(String sport, Map<String, int> counts) {
+  String _statSummary(String sport, Map<String, int> counts, int? minutes) {
+    final parts = <String>[];
+    if (minutes != null && minutes > 0) parts.add('${minutes}m');
     switch (sport) {
       case 'basketball':
-        final parts = <String>[];
         if ((counts['point'] ?? 0) > 0) {
           parts.add('${counts['point']}pts');
         }
@@ -250,9 +265,7 @@ class MatchSummaryScreen extends ConsumerWidget {
         if ((counts['foul'] ?? 0) > 0) {
           parts.add('${counts['foul']}f');
         }
-        return parts.isEmpty ? '—' : parts.join(' · ');
       case 'volleyball':
-        final parts = <String>[];
         if ((counts['serve'] ?? 0) > 0) {
           parts.add('${counts['serve']}srv');
         }
@@ -262,16 +275,14 @@ class MatchSummaryScreen extends ConsumerWidget {
         if ((counts['error'] ?? 0) > 0) {
           parts.add('${counts['error']}err');
         }
-        return parts.isEmpty ? '—' : parts.join(' · ');
       default: // football
-        final parts = <String>[];
         if ((counts['goal'] ?? 0) > 0) parts.add('${counts['goal']}G');
         if ((counts['assist'] ?? 0) > 0) parts.add('${counts['assist']}A');
         if ((counts['shot'] ?? 0) > 0) parts.add('${counts['shot']}S');
         if ((counts['save'] ?? 0) > 0) parts.add('${counts['save']}Sv');
         if ((counts['yellow'] ?? 0) > 0) parts.add('${counts['yellow']}Y');
         if ((counts['red'] ?? 0) > 0) parts.add('${counts['red']}R');
-        return parts.isEmpty ? '—' : parts.join(' · ');
     }
+    return parts.isEmpty ? '—' : parts.join(' · ');
   }
 }

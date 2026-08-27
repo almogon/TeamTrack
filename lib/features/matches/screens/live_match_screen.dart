@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../shared/widgets/bench_list.dart';
+import '../../../shared/widgets/player_picker_sheet.dart';
+import '../../teams/models/lineup_formation.dart';
 import '../../teams/models/player.dart';
 import '../../teams/models/team.dart';
 import '../../teams/providers/team_provider.dart';
+import '../../teams/widgets/lineup_grid_view.dart';
 import '../models/match.dart';
 import '../providers/live_match_notifier.dart';
 
@@ -95,6 +99,47 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
     );
   }
 
+  /// Tapping an on-field slot means different things depending on the
+  /// match: mid-match with a player already there, it's the primary
+  /// stat-recording action (unchanged from before); everywhere else
+  /// (pre-kickoff setup, an empty slot, or reassigning while paused) it
+  /// opens the same player picker the team's Line-Up tab uses — picking a
+  /// player there goes through [LiveMatchNotifier.assignSlot], so it's
+  /// substitution-tracked exactly like a bench-to-pitch drag is.
+  Future<void> _onSlotTap(
+    BuildContext context,
+    int slotIndex,
+    LiveMatchState liveState,
+    List<Player> activePlayers,
+  ) async {
+    if (liveState.matchStatus == 'finished') return;
+    final player = liveState.slots[slotIndex];
+    if (liveState.matchStatus == 'live' && player != null) {
+      _showStatPicker(context, player.id);
+      return;
+    }
+
+    final assignedIds = liveState.slots.values.map((p) => p.id).toSet();
+    final result = await showModalBottomSheet<Object?>(
+      context: context,
+      builder: (_) => PlayerPickerSheet(
+        players: activePlayers,
+        currentPlayerId: player?.id,
+        assignedPlayerIds: assignedIds,
+        allowClear: player != null,
+        positions: widget.team.sportType.positions,
+      ),
+    );
+    if (result == null || !mounted) return;
+    final notifier = ref.read(liveMatchProvider(widget.match.id).notifier);
+    if (result == clearSlotSentinel) {
+      notifier.clearSlot(slotIndex);
+    } else {
+      final chosen = activePlayers.firstWhere((p) => p.id == result);
+      notifier.assignSlot(slotIndex, chosen);
+    }
+  }
+
   Future<void> _confirmEnd(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -180,32 +225,89 @@ class _LiveMatchScreenState extends ConsumerState<LiveMatchScreen> {
             ),
           ),
 
-          // Player grid
+          // Lineup: same pitch + bench design as the team's Line-Up tab —
+          // tap/drag a bench player onto a slot to sub them on; tap an
+          // on-field player during live play to record a stat instead.
           Expanded(
             child: teamAsync.when(
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('$e')),
               data: (detail) {
-                final players =
+                if (!liveState.isInitialized || liveState.formation == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final activePlayers =
                     detail.players.where((p) => p.active).toList();
-                if (players.isEmpty) {
+                if (activePlayers.isEmpty) {
                   return const Center(child: Text('No active players'));
                 }
-                return GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 1.3,
+
+                final formations = LineupFormation.forTeam(
+                    widget.team.sportType, widget.team.format);
+                final roleOrder = widget.team.sportType.positions
+                    .map((p) => p.code)
+                    .toList();
+                final onFieldIds =
+                    liveState.slots.values.map((p) => p.id).toSet();
+                final bench = activePlayers
+                    .where((p) => !onFieldIds.contains(p.id))
+                    .toList();
+
+                final formationDropdown = DropdownButtonFormField<String>(
+                  initialValue: liveState.formation!.key,
+                  decoration: const InputDecoration(
+                    labelText: 'Formation',
+                    border: OutlineInputBorder(),
+                    isDense: true,
                   ),
-                  itemCount: players.length,
-                  itemBuilder: (_, i) => _PlayerCard(
-                    player: players[i],
-                    enabled: liveState.matchStatus == 'live',
-                    onTap: () => _showStatPicker(context, players[i].id),
+                  items: [
+                    for (final formation in formations)
+                      DropdownMenuItem(
+                        value: formation.key,
+                        child: Text(formation.key),
+                      ),
+                  ],
+                  onChanged: liveState.matchStatus == 'finished'
+                      ? null
+                      : (key) {
+                          if (key == null) return;
+                          final formation =
+                              formations.firstWhere((f) => f.key == key);
+                          notifier.setFormation(formation,
+                              roleOrder: roleOrder);
+                        },
+                );
+
+                final pitch = LineupGridView(
+                  team: widget.team,
+                  formation: liveState.formation!,
+                  slots: liveState.slots,
+                  onSlotTap: (slotIndex) => _onSlotTap(
+                      context, slotIndex, liveState, activePlayers),
+                  onSlotDrop: liveState.matchStatus == 'finished'
+                      ? null
+                      : (slotIndex, player) =>
+                          notifier.assignSlot(slotIndex, player),
+                );
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: formationDropdown,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: pitch,
+                      ),
+                      const Divider(height: 32, indent: 16, endIndent: 16),
+                      BenchHorizontalList(players: bench),
+                    ],
                   ),
                 );
               },
@@ -281,67 +383,6 @@ class _ControlRow extends StatelessWidget {
           ],
         _ => const [],
       },
-    );
-  }
-}
-
-class _PlayerCard extends StatelessWidget {
-  const _PlayerCard({
-    required this.player,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final Player player;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final initials = player.displayName.isNotEmpty
-        ? player.displayName[0].toUpperCase()
-        : '?';
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor:
-                    Theme.of(context).colorScheme.primaryContainer,
-                child: Text(
-                  initials,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color:
-                        Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              if (player.number != null)
-                Text(
-                  '#${player.number}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                ),
-              Text(
-                player.displayName,
-                style: Theme.of(context).textTheme.bodyMedium,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

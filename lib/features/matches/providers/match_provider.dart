@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/match.dart';
 import '../models/match_player_stat.dart';
+import '../models/match_substitution.dart';
 import '../models/stat_event.dart';
 
 final matchProvider = FutureProvider.family<Match, String>((ref, matchId) async {
@@ -35,5 +36,18 @@ final matchEventsProvider =
       .order('minute', ascending: true);
   return (data as List<dynamic>)
       .map((e) => StatEvent.fromJson(e as Map<String, dynamic>))
+      .toList();
+});
+
+/// Every on-pitch stint recorded for a match — used to compute each
+/// player's total minutes played (see [MatchSubstitution]).
+final matchSubstitutionsProvider =
+    FutureProvider.family<List<MatchSubstitution>, String>((ref, matchId) async {
+  final data = await Supabase.instance.client
+      .from('match_substitutions')
+      .select()
+      .eq('match_id', matchId);
+  return (data as List<dynamic>)
+      .map((e) => MatchSubstitution.fromJson(e as Map<String, dynamic>))
       .toList();
 });

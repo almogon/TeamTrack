@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../shared/widgets/player_diamond.dart';
+import '../../../shared/widgets/bench_list.dart';
+import '../../../shared/widgets/player_picker_sheet.dart';
 import '../models/lineup_formation.dart';
 import '../models/player.dart';
-import '../models/sport_type.dart';
 import '../models/team.dart';
 import '../providers/lineup_provider.dart';
 import '../providers/team_provider.dart';
 import '../providers/teams_provider.dart';
 import 'lineup_grid_view.dart';
-
-const _clearSlot = Object();
 
 /// Below this width the Line-Up tab uses the single-column phone layout;
 /// at or above it, the two-column tablet/desktop layout.
@@ -81,7 +79,7 @@ class _LineupTabState extends ConsumerState<LineupTab> {
 
     final result = await showModalBottomSheet<Object?>(
       context: context,
-      builder: (context) => _PlayerPickerSheet(
+      builder: (context) => PlayerPickerSheet(
         players: widget.players,
         currentPlayerId: currentPlayer?.id,
         assignedPlayerIds: assignedPlayerIds,
@@ -91,7 +89,7 @@ class _LineupTabState extends ConsumerState<LineupTab> {
     );
     if (result == null) return;
 
-    if (result == _clearSlot) {
+    if (result == clearSlotSentinel) {
       setState(() {
         _slots.remove(slotIndex);
         _dirty = true;
@@ -256,7 +254,7 @@ class _WideLayout extends StatelessWidget {
           flex: 1,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
-            child: _BenchPanel(players: bench),
+            child: BenchPanel(players: bench),
           ),
         ),
         Expanded(
@@ -324,279 +322,12 @@ class _CompactLayout extends StatelessWidget {
                   child: pitch,
                 ),
                 const Divider(height: 32, indent: 16, endIndent: 16),
-                _BenchHorizontalList(players: bench),
+                BenchHorizontalList(players: bench),
               ],
             ),
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Wide-layout bench: a vertically scrollable list (the panel itself has a
-/// fixed, narrower width from its parent `Expanded`), names ellipsized so a
-/// long name never forces the panel wider.
-class _BenchPanel extends StatelessWidget {
-  const _BenchPanel({required this.players});
-
-  final List<Player> players;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Bench (${players.length})',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: players.isEmpty
-              ? const Text('Everyone is on the pitch')
-              : ListView.builder(
-                  itemCount: players.length,
-                  itemBuilder: (context, i) {
-                    final player = players[i];
-                    return Draggable<Player>(
-                      data: player,
-                      feedback: Material(
-                        color: Colors.transparent,
-                        child: PlayerDiamond(player: player, onTap: () {}),
-                      ),
-                      childWhenDragging: Opacity(
-                        opacity: 0.4,
-                        child: _BenchTile(player: player),
-                      ),
-                      child: _BenchTile(player: player),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BenchTile extends StatelessWidget {
-  const _BenchTile({required this.player});
-
-  final Player player;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        child: Text(player.number?.toString() ?? player.initials),
-      ),
-      title: Text(player.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: player.position != null
-          ? Text(player.position!, maxLines: 1, overflow: TextOverflow.ellipsis)
-          : null,
-    );
-  }
-}
-
-/// Compact-layout bench: a horizontal scroll of number-only avatars —
-/// there's no room for names next to the pitch on a phone screen.
-class _BenchHorizontalList extends StatelessWidget {
-  const _BenchHorizontalList({required this.players});
-
-  final List<Player> players;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Bench (${players.length})',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-          ),
-          const SizedBox(height: 8),
-          if (players.isEmpty)
-            const Text('Everyone is on the pitch')
-          else
-            SizedBox(
-              height: 64,
-              child: Scrollbar(
-                thumbVisibility: true,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.only(bottom: 8),
-                  itemCount: players.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 12),
-                  itemBuilder: (context, i) {
-                    final player = players[i];
-                    return Draggable<Player>(
-                      data: player,
-                      feedback: Material(
-                        color: Colors.transparent,
-                        child: PlayerDiamond(player: player, onTap: () {}),
-                      ),
-                      childWhenDragging: Opacity(
-                        opacity: 0.4,
-                        child: _BenchNumberAvatar(player: player),
-                      ),
-                      child: _BenchNumberAvatar(player: player),
-                    );
-                  },
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BenchNumberAvatar extends StatelessWidget {
-  const _BenchNumberAvatar({required this.player});
-
-  final Player player;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return CircleAvatar(
-      radius: 24,
-      backgroundColor: cs.secondaryContainer,
-      child: Text(
-        player.number?.toString() ?? player.initials,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: cs.onSecondaryContainer,
-        ),
-      ),
-    );
-  }
-}
-
-class _PlayerPickerSheet extends StatefulWidget {
-  const _PlayerPickerSheet({
-    required this.players,
-    required this.currentPlayerId,
-    required this.assignedPlayerIds,
-    required this.allowClear,
-    required this.positions,
-  });
-
-  final List<Player> players;
-  final String? currentPlayerId;
-  final Set<String> assignedPlayerIds;
-  final bool allowClear;
-  final List<Position> positions;
-
-  @override
-  State<_PlayerPickerSheet> createState() => _PlayerPickerSheetState();
-}
-
-class _PlayerPickerSheetState extends State<_PlayerPickerSheet> {
-  String? _positionFilter;
-
-  bool _isElsewhere(Player player) =>
-      player.id != widget.currentPlayerId &&
-      widget.assignedPlayerIds.contains(player.id);
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = _positionFilter == null
-        ? widget.players
-        : widget.players.where((p) => p.position == _positionFilter).toList();
-
-    // Unassigned players first, already-assigned ones (elsewhere) after —
-    // each group keeps the roster's original relative order.
-    final unassigned = <Player>[];
-    final elsewhere = <Player>[];
-    for (final player in filtered) {
-      (_isElsewhere(player) ? elsewhere : unassigned).add(player);
-    }
-    final sorted = [...unassigned, ...elsewhere];
-
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('All'),
-                  selected: _positionFilter == null,
-                  onSelected: (_) => setState(() => _positionFilter = null),
-                ),
-                for (final position in widget.positions)
-                  ChoiceChip(
-                    label: Text(position.code),
-                    selected: _positionFilter == position.code,
-                    onSelected: (_) => setState(() {
-                      _positionFilter =
-                          _positionFilter == position.code
-                              ? null
-                              : position.code;
-                    }),
-                  ),
-              ],
-            ),
-          ),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                if (widget.allowClear)
-                  ListTile(
-                    leading: const Icon(Icons.remove_circle_outline),
-                    title: const Text('Clear this slot'),
-                    onTap: () => Navigator.pop(context, _clearSlot),
-                  ),
-                for (final player in sorted)
-                  ListTile(
-                    leading: CircleAvatar(
-                      child: Text(player.number?.toString() ?? player.initials),
-                    ),
-                    title: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            player.name,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (player.position != null) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            player.position!,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    subtitle: _isElsewhere(player)
-                        ? const Text('Already in another slot')
-                        : null,
-                    trailing: player.id == widget.currentPlayerId
-                        ? const Icon(Icons.check)
-                        : null,
-                    onTap: () => Navigator.pop(context, player.id),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
