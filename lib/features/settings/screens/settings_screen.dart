@@ -69,15 +69,13 @@ class SettingsScreen extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                   )
                 : const Icon(Icons.chevron_right),
-            onTap: atTeamLimit
-                ? () => context.push('/subscription')
-                : () => context.push('/teams/new'),
+            onTap: atTeamLimit ? null : () => context.push('/teams/new'),
           ),
           if (atTeamLimit)
             Padding(
               padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
               child: Text(
-                'Upgrade your plan to add more teams.',
+                "You've reached the beta's team limit.",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -87,10 +85,8 @@ class SettingsScreen extends ConsumerWidget {
           _SectionLabel('Plan'),
           ListTile(
             leading: const Icon(Icons.workspace_premium_outlined),
-            title: const Text('Manage subscription'),
-            subtitle: Text('$planLabel plan'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/subscription'),
+            title: const Text('Plan'),
+            subtitle: const Text('Free plan · Beta'),
           ),
           if (isAdminOrManager) ...[
             const Divider(),
