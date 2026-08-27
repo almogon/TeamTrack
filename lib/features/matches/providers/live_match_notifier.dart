@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../teams/providers/leaderboard_provider.dart';
 import '../models/match.dart';
 import '../models/stat_event.dart';
 import '../services/match_notification_service.dart';
+import 'match_list_provider.dart';
 
 class LiveMatchState {
   const LiveMatchState({
@@ -105,6 +107,7 @@ class LiveMatchNotifier extends FamilyNotifier<LiveMatchState, String> {
       'started_at': DateTime.now().toIso8601String(),
     }).eq('id', state.match!.id);
     state = state.copyWith(matchStatus: 'live', isRunning: true);
+    ref.invalidate(matchListProvider(state.match!.teamId));
     _startTimer();
   }
 
@@ -115,6 +118,7 @@ class LiveMatchNotifier extends FamilyNotifier<LiveMatchState, String> {
       'paused_at': DateTime.now().toIso8601String(),
     }).eq('id', state.match!.id);
     state = state.copyWith(matchStatus: 'paused', isRunning: false);
+    ref.invalidate(matchListProvider(state.match!.teamId));
   }
 
   Future<void> resume() async {
@@ -123,12 +127,14 @@ class LiveMatchNotifier extends FamilyNotifier<LiveMatchState, String> {
       'paused_at': null,
     }).eq('id', state.match!.id);
     state = state.copyWith(matchStatus: 'live', isRunning: true);
+    ref.invalidate(matchListProvider(state.match!.teamId));
     _startTimer();
   }
 
   Future<void> endMatch() async {
     _timer?.cancel();
     final matchId = state.match!.id;
+    final teamId = state.match!.teamId;
     await Supabase.instance.client.from('matches').update({
       'status': 'finished',
       'finished_at': DateTime.now().toIso8601String(),
@@ -136,6 +142,13 @@ class LiveMatchNotifier extends FamilyNotifier<LiveMatchState, String> {
     await Supabase.instance.client
         .rpc('rebuild_match_player_stats', params: {'p_match_id': matchId});
     state = state.copyWith(matchStatus: 'finished', isRunning: false);
+    // The DB is correct the instant the calls above return, but the
+    // Matches list and Leaderboard each hold their own cached provider
+    // state — without this, they keep showing the pre-finish match
+    // (wrong "Start" action instead of "Summary") and pre-finish points
+    // until something unrelated happens to refetch them.
+    ref.invalidate(matchListProvider(teamId));
+    ref.invalidate(teamLeaderboardProvider(teamId));
   }
 
   Future<void> recordStat(String playerId, String statType, {int value = 1}) async {
