@@ -41,11 +41,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 4),
               child: Center(
-                child: ActionChip(
-                  label: Text(planLabel, style: const TextStyle(fontSize: 11)),
+                child: Chip(
+                  label: Text('$planLabel · Beta',
+                      style: const TextStyle(fontSize: 11)),
                   padding: EdgeInsets.zero,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  onPressed: () => context.push('/subscription'),
                 ),
               ),
             ),

@@ -15,6 +15,14 @@ import 'football_pitch_background.dart';
 /// main menu and the editable Line-Up tab, so both show the exact same
 /// disposition.
 class LineupGridView extends StatelessWidget {
+  /// The pitch's width formula, exposed so callers that need to line
+  /// another widget's edges up with the pitch (e.g. the Line-Up tab's
+  /// formation dropdown, in its compact/phone layout) apply the exact same
+  /// cap-and-center math instead of only matching outer padding — matching
+  /// padding alone still leaves the pitch's own internal centering to
+  /// introduce a second, smaller offset.
+  static double pitchWidth(double maxWidth) => math.min(maxWidth * 0.9, 480);
+
   const LineupGridView({
     super.key,
     required this.team,
@@ -111,7 +119,7 @@ class LineupGridView extends StatelessWidget {
       builder: (context, constraints) {
         return Center(
           child: SizedBox(
-            width: math.min(constraints.maxWidth * 0.9, 480),
+            width: pitchWidth(constraints.maxWidth),
             child: Stack(
               // Stack defaults non-positioned children to top-left, which
               // left the grid hugging the left edge once the pitch box

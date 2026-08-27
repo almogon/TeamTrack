@@ -398,8 +398,22 @@ class _SettingsTab extends ConsumerWidget {
       children: [
         _SectionLabel('League'),
         leagueAsync.when(
-          loading: () => const SizedBox.shrink(),
-          error: (_, _) => const SizedBox.shrink(),
+          loading: () => const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+          error: (_, _) => ListTile(
+            leading: Icon(Icons.error_outline, color: cs.error),
+            title: const Text('Could not load league info'),
+            trailing: TextButton(
+              onPressed: () => ref.invalidate(teamLeagueProvider(teamId)),
+              child: const Text('Retry'),
+            ),
+          ),
           data: (League? league) {
             if (league == null) {
               return Column(

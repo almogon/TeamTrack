@@ -297,9 +297,21 @@ class _CompactLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // The dropdown is capped/centered with the exact same formula
+        // LineupGridView uses for the pitch (LineupGridView.pitchWidth),
+        // computed from the same 16px-inset width — matching only the
+        // *outer* padding still left them apart, because the pitch also
+        // centers itself a second time inside that padding.
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: formationDropdown,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Center(
+              child: SizedBox(
+                width: LineupGridView.pitchWidth(constraints.maxWidth),
+                child: formationDropdown,
+              ),
+            ),
+          ),
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -307,9 +319,6 @@ class _CompactLayout extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Matches the dropdown row's 16px horizontal inset above —
-                // the pitch used to sit flush at 0 while the dropdown was
-                // inset 16px, so their left edges didn't line up.
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: pitch,
