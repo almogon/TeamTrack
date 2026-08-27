@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../shared/widgets/player_diamond.dart';
-import '../../leagues/models/league.dart';
-import '../../leagues/providers/leagues_provider.dart';
 import '../models/lineup_formation.dart';
 import '../models/player.dart';
 import '../models/sport_type.dart';
@@ -252,38 +249,27 @@ class _WideLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: _LeagueActions(teamId: teamId),
+        Expanded(
+          flex: 1,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+            child: _BenchPanel(players: bench),
+          ),
         ),
         Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                flex: 1,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
-                  child: _BenchPanel(players: bench),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
-                  child: Column(
-                    children: [
-                      formationDropdown,
-                      const SizedBox(height: 16),
-                      pitch,
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          flex: 2,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
+            child: Column(
+              children: [
+                formationDropdown,
+                const SizedBox(height: 16),
+                pitch,
+              ],
+            ),
           ),
         ),
       ],
@@ -291,9 +277,9 @@ class _WideLayout extends StatelessWidget {
   }
 }
 
-/// Phone: formation dropdown with a trailing icon that opens league actions
-/// in a sheet (no room for them inline), pitch above a horizontally
-/// scrolling, number-only bench.
+/// Phone: formation dropdown above the pitch and a horizontally scrolling,
+/// number-only bench. League actions live in the team's Settings tab, not
+/// here.
 class _CompactLayout extends StatelessWidget {
   const _CompactLayout({
     required this.teamId,
@@ -313,25 +299,7 @@ class _CompactLayout extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Row(
-            children: [
-              Expanded(child: formationDropdown),
-              const SizedBox(width: 4),
-              IconButton(
-                icon: const Icon(Icons.more_vert),
-                tooltip: 'League',
-                onPressed: () => showModalBottomSheet<void>(
-                  context: context,
-                  builder: (_) => SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _LeagueActions(teamId: teamId),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          child: formationDropdown,
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -339,7 +307,13 @@ class _CompactLayout extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                pitch,
+                // Matches the dropdown row's 16px horizontal inset above —
+                // the pitch used to sit flush at 0 while the dropdown was
+                // inset 16px, so their left edges didn't line up.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: pitch,
+                ),
                 const Divider(height: 32, indent: 16, endIndent: 16),
                 _BenchHorizontalList(players: bench),
               ],
@@ -347,53 +321,6 @@ class _CompactLayout extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Join/request-league actions when the team has no league yet, or a chip
-/// linking to its current league. Shared between the wide layout's inline
-/// row and the compact layout's bottom sheet.
-class _LeagueActions extends ConsumerWidget {
-  const _LeagueActions({required this.teamId});
-
-  final String teamId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final leagueAsync = ref.watch(teamLeagueProvider(teamId));
-
-    return leagueAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
-      data: (League? league) {
-        if (league == null) {
-          return Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: () =>
-                    context.push('/teams/$teamId/leagues/discover'),
-                icon: const Icon(Icons.explore_outlined),
-                label: const Text('Join a league'),
-              ),
-              TextButton(
-                onPressed: () => context.push('/teams/$teamId/leagues/new'),
-                child: const Text('Request a league'),
-              ),
-            ],
-          );
-        }
-        return Align(
-          alignment: Alignment.centerLeft,
-          child: ActionChip(
-            avatar: const Icon(Icons.emoji_events_outlined, size: 18),
-            label: Text('${league.name} · ${league.season}'),
-            onPressed: () => context.push('/leagues/${league.id}'),
-          ),
-        );
-      },
     );
   }
 }
@@ -455,7 +382,7 @@ class _BenchTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
-        child: Text(player.number?.toString() ?? '?'),
+        child: Text(player.number?.toString() ?? player.initials),
       ),
       title: Text(player.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: player.position != null
@@ -490,26 +417,30 @@ class _BenchHorizontalList extends StatelessWidget {
             const Text('Everyone is on the pitch')
           else
             SizedBox(
-              height: 56,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: players.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 12),
-                itemBuilder: (context, i) {
-                  final player = players[i];
-                  return Draggable<Player>(
-                    data: player,
-                    feedback: Material(
-                      color: Colors.transparent,
-                      child: PlayerDiamond(player: player, onTap: () {}),
-                    ),
-                    childWhenDragging: Opacity(
-                      opacity: 0.4,
+              height: 64,
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  itemCount: players.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 12),
+                  itemBuilder: (context, i) {
+                    final player = players[i];
+                    return Draggable<Player>(
+                      data: player,
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: PlayerDiamond(player: player, onTap: () {}),
+                      ),
+                      childWhenDragging: Opacity(
+                        opacity: 0.4,
+                        child: _BenchNumberAvatar(player: player),
+                      ),
                       child: _BenchNumberAvatar(player: player),
-                    ),
-                    child: _BenchNumberAvatar(player: player),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
         ],
@@ -530,7 +461,7 @@ class _BenchNumberAvatar extends StatelessWidget {
       radius: 24,
       backgroundColor: cs.secondaryContainer,
       child: Text(
-        player.number?.toString() ?? '?',
+        player.number?.toString() ?? player.initials,
         style: TextStyle(
           fontWeight: FontWeight.bold,
           color: cs.onSecondaryContainer,
@@ -622,7 +553,7 @@ class _PlayerPickerSheetState extends State<_PlayerPickerSheet> {
                 for (final player in sorted)
                   ListTile(
                     leading: CircleAvatar(
-                      child: Text(player.number?.toString() ?? '?'),
+                      child: Text(player.number?.toString() ?? player.initials),
                     ),
                     title: Row(
                       children: [

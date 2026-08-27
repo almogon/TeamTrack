@@ -130,7 +130,7 @@ class _PlayerDetailView extends ConsumerWidget {
               radius: 48,
               backgroundColor: cs.primaryContainer,
               child: Text(
-                player.number != null ? '${player.number}' : '?',
+                player.number != null ? '${player.number}' : player.initials,
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,

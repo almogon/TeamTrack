@@ -50,7 +50,7 @@ class PlayerDiamond extends StatelessWidget {
                   child: Text(
                     player.number != null
                         ? '${player.number}'
-                        : player.displayName.substring(0, 1).toUpperCase(),
+                        : player.initials,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: cs.onPrimaryContainer,

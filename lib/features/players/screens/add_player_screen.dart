@@ -10,6 +10,8 @@ import '../../teams/models/player.dart';
 import '../../teams/models/sport_type.dart';
 import '../../teams/providers/team_provider.dart';
 
+const _maxRosterSize = 21;
+
 class AddPlayerScreen extends ConsumerStatefulWidget {
   const AddPlayerScreen({super.key, required this.teamId, this.player});
 
@@ -49,8 +51,13 @@ class _AddPlayerScreenState extends ConsumerState<AddPlayerScreen> {
     super.dispose();
   }
 
-  Future<void> _submit(List<Position> positions, {required bool addMore}) async {
+  Future<void> _submit(
+    List<Position> positions, {
+    required bool addMore,
+    required bool atRosterLimit,
+  }) async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_isEdit && atRosterLimit) return;
     setState(() => _loading = true);
     try {
       final number = _numberController.text.trim().isEmpty
@@ -119,6 +126,8 @@ class _AddPlayerScreenState extends ConsumerState<AddPlayerScreen> {
       ),
       data: (detail) {
         final positions = detail.team.sportType.positions;
+        final atRosterLimit =
+            !_isEdit && detail.players.length >= _maxRosterSize;
         return Scaffold(
           appBar: AppBar(
             title: Text(_isEdit ? 'Edit player' : 'Add player'),
@@ -133,6 +142,27 @@ class _AddPlayerScreenState extends ConsumerState<AddPlayerScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (atRosterLimit) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .errorContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Roster is full ($_maxRosterSize/$_maxRosterSize players). '
+                            'Remove a player before adding a new one.',
+                            style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       TextFormField(
                         controller: _nameController,
                         decoration:
@@ -187,7 +217,8 @@ class _AddPlayerScreenState extends ConsumerState<AddPlayerScreen> {
                           label: 'Save',
                           onPressed: _loading
                               ? null
-                              : () => _submit(positions, addMore: false),
+                              : () => _submit(positions,
+                                  addMore: false, atRosterLimit: false),
                           loading: _loading,
                         )
                       else
@@ -195,18 +226,22 @@ class _AddPlayerScreenState extends ConsumerState<AddPlayerScreen> {
                           children: [
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: _loading
+                                onPressed: _loading || atRosterLimit
                                     ? null
-                                    : () => _submit(positions, addMore: true),
+                                    : () => _submit(positions,
+                                        addMore: true,
+                                        atRosterLimit: atRosterLimit),
                                 child: const Text('Add more'),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: FilledButton(
-                                onPressed: _loading
+                                onPressed: _loading || atRosterLimit
                                     ? null
-                                    : () => _submit(positions, addMore: false),
+                                    : () => _submit(positions,
+                                        addMore: false,
+                                        atRosterLimit: atRosterLimit),
                                 child: _loading
                                     ? const SizedBox(
                                         height: 18,

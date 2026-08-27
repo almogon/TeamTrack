@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../leagues/models/league.dart';
+import '../../leagues/providers/leagues_provider.dart';
 import '../../matches/models/match.dart';
 import '../../matches/providers/match_list_provider.dart';
 import '../../players/models/player_score.dart';
@@ -9,7 +11,10 @@ import '../models/player.dart';
 import '../models/team.dart';
 import '../providers/leaderboard_provider.dart';
 import '../providers/team_provider.dart';
+import '../providers/teams_provider.dart';
 import '../widgets/lineup_tab.dart';
+
+const _maxRosterSize = 21;
 
 class TeamDetailScreen extends ConsumerWidget {
   const TeamDetailScreen({
@@ -34,7 +39,7 @@ class TeamDetailScreen extends ConsumerWidget {
         body: Center(child: Text('Error: $err')),
       ),
       data: (detail) => DefaultTabController(
-        length: 4,
+        length: 5,
         initialIndex: initialTabIndex,
         child: Scaffold(
           appBar: AppBar(
@@ -63,6 +68,7 @@ class TeamDetailScreen extends ConsumerWidget {
                       Tab(text: 'Roster'),
                       Tab(text: 'Matches'),
                       Tab(text: 'Leaderboard'),
+                      Tab(text: 'Settings'),
                     ],
                   ),
                 ],
@@ -75,7 +81,8 @@ class TeamDetailScreen extends ConsumerWidget {
               return AnimatedBuilder(
                 animation: tab,
                 builder: (_, _) {
-                  if (tab.index == 1) {
+                  if (tab.index == 1 &&
+                      detail.players.length < _maxRosterSize) {
                     return FloatingActionButton.extended(
                       onPressed: () =>
                           context.push('/teams/$teamId/players/new'),
@@ -104,6 +111,7 @@ class TeamDetailScreen extends ConsumerWidget {
                   : _PlayerList(players: detail.players, teamId: teamId),
               _MatchListTab(teamId: teamId, team: detail.team),
               _LeaderboardTab(teamId: teamId),
+              _SettingsTab(teamId: teamId),
             ],
           ),
         ),
@@ -154,7 +162,7 @@ class _PlayerList extends StatelessWidget {
           leading: CircleAvatar(
             backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
             child: Text(
-              player.number != null ? '${player.number}' : '?',
+              player.number != null ? '${player.number}' : player.initials,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -368,6 +376,116 @@ class _LeaderboardTile extends StatelessWidget {
           ),
           Text('pts', style: Theme.of(context).textTheme.bodySmall),
         ],
+      ),
+    );
+  }
+}
+
+// ── Settings tab ──────────────────────────────────────────────────────────────
+
+class _SettingsTab extends ConsumerWidget {
+  const _SettingsTab({required this.teamId});
+
+  final String teamId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final leagueAsync = ref.watch(teamLeagueProvider(teamId));
+    final cs = Theme.of(context).colorScheme;
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      children: [
+        _SectionLabel('League'),
+        leagueAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
+          data: (League? league) {
+            if (league == null) {
+              return Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.explore_outlined),
+                    title: const Text('Join a league'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        context.push('/teams/$teamId/leagues/discover'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.add_circle_outline),
+                    title: const Text('Request a league'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/teams/$teamId/leagues/new'),
+                  ),
+                ],
+              );
+            }
+            return ListTile(
+              leading: const Icon(Icons.emoji_events_outlined),
+              title: Text(league.name),
+              subtitle: Text(league.season),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/leagues/${league.id}'),
+            );
+          },
+        ),
+        const Divider(height: 32),
+        _SectionLabel('Team'),
+        ListTile(
+          leading: Icon(Icons.archive_outlined, color: cs.error),
+          title: Text('Remove team', style: TextStyle(color: cs.error)),
+          subtitle: const Text('Hides it for you — its data is kept'),
+          onTap: () => _confirmRemove(context, ref),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmRemove(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove team?'),
+        content: const Text(
+          'This team will no longer show up in your team list. Its '
+          'players, matches and stats are kept, not deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(teamsProvider.notifier).archiveTeam(teamId);
+    if (context.mounted) context.go('/home');
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Text(
+        text.toUpperCase(),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              letterSpacing: 1.2,
+            ),
       ),
     );
   }
