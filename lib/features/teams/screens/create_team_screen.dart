@@ -80,16 +80,9 @@ class _CreateTeamScreenState extends ConsumerState<CreateTeamScreen> {
         title: const Text('Plan limit reached'),
         content: Text(e.message),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
           FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.push('/subscription');
-            },
-            child: const Text('Upgrade'),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
         ],
       ),
