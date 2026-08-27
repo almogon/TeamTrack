@@ -125,11 +125,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _loading ? null : _signIn,
                     loading: _loading,
                   ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () => context.push('/register'),
-                    child: const Text("Don't have an account? Register"),
-                  ),
                 ],
               ),
             ),
